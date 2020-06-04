@@ -1,0 +1,7 @@
+Package: json-roller
+Version: 1.0
+Section: misc
+Priority: low
+Architecture: all
+Description: Transform JSON documents to flat CSV files
+Maintainer: openstatic.org <support@openstatic.org>

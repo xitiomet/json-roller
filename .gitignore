@@ -1,0 +1,8 @@
+*~
+*.link
+build/
+target/
+dependency-reduced-pom.xml
+.gradle
+config.json
+.DS_Store
