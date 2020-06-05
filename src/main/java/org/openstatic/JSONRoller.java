@@ -38,9 +38,8 @@ public class JSONRoller
     {
         CommandLine cmd = null;
         File inFile = null;
-        File outFile = null;
         String data = "";
-        String basename = "json-roller-data.csv";
+        String basename = "json-roller-data";
         try
         {
             Options options = new Options();
@@ -48,10 +47,21 @@ public class JSONRoller
 
             options.addOption(new Option("v", "verbose", false, "Be Verbose"));
             options.addOption(new Option("?", "help", false, "Shows help"));
+            
             options.addOption(new Option("i", "input", true, "Input file .json only"));
             options.addOption(new Option("u", "url", true, "URL to read json from"));
-            options.addOption(new Option("o", "output", true, "Specify output file"));
 
+            Option csvOption = new Option("c", "csv", true, "Output CSV file");
+            csvOption.setOptionalArg(true);
+            options.addOption(csvOption);
+
+            Option tsvOption = new Option("t", "tsv", true, "Output TSV file");
+            tsvOption.setOptionalArg(true);
+            options.addOption(tsvOption);
+
+            Option mdOption = new Option("m", "md", true, "Output Markdown file");
+            mdOption.setOptionalArg(true);
+            options.addOption(mdOption);
             cmd = parser.parse(options, args);
 
             if (cmd.hasOption("?"))
@@ -79,11 +89,22 @@ public class JSONRoller
                 System.err.println("You must specify an input file -i [filename] or url -u [url]");
                 System.exit(0);
             }
-            outFile = new File(cmd.getOptionValue("o", basename + ".csv"));
 
             JSONArray ja = readJSONData(data);
             List<String[]> csvData = JSONArrayFlatten(ja);
-            writeCSV(outFile, csvData);
+
+            if (cmd.hasOption("c"))
+            {
+                OutputData.writeCSV(new File(cmd.getOptionValue("c", basename + ".csv")), csvData);
+            }
+            if (cmd.hasOption("t"))
+            {
+                OutputData.writeTSV(new File(cmd.getOptionValue("t", basename + ".tsv")), csvData);
+            }
+            if (cmd.hasOption("m"))
+            {
+                OutputData.writeMarkdown(new File(cmd.getOptionValue("m", basename + ".md")), csvData);
+            }
         } catch (Exception e) {
             e.printStackTrace(System.err);
         }
@@ -95,32 +116,6 @@ public class JSONRoller
         {
             System.err.println(text);
         }
-    }
-
-    public static void writeCSV(File csvOutputFile, List<String[]> dataLines) throws IOException 
-    {
-        try (PrintWriter pw = new PrintWriter(csvOutputFile)) {
-            dataLines.stream()
-              .map(JSONRoller::convertToCSV)
-              .forEach(pw::println);
-        }
-    }
-    
-    public static String convertToCSV(String[] data)
-    {
-        return Stream.of(data)
-                .map(JSONRoller::escapeSpecialCharacters)
-                .collect(Collectors.joining(","));
-    }
-    
-    public static String escapeSpecialCharacters(String data) 
-    {
-        String escapedData = data.replaceAll("\\R", " ");
-        if (data.contains(",") || data.contains("\"") || data.contains("'")) {
-            data = data.replace("\"", "\"\"");
-            escapedData = "\"" + data + "\"";
-        }
-        return escapedData;
     }
 
     public static JSONArray readJSONData(String data)
