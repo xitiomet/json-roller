@@ -34,6 +34,7 @@ import org.json.*;
 public class JSONRoller
 {
     private static boolean verbose = false;
+    private static List<String> keyLayers = new ArrayList<String>();
     public static void main(String[] args) throws IOException 
     {
         CommandLine cmd = null;
@@ -50,7 +51,7 @@ public class JSONRoller
             
             options.addOption(new Option("i", "input", true, "Input file .json only"));
             options.addOption(new Option("u", "url", true, "URL to read json from"));
-
+            options.addOption(new Option("k", "key-layers", true, "Comma seperated list of key layers for nested structures."));
             Option csvOption = new Option("c", "csv", true, "Output CSV file");
             csvOption.setOptionalArg(true);
             options.addOption(csvOption);
@@ -69,6 +70,12 @@ public class JSONRoller
                 HelpFormatter formatter = new HelpFormatter();
                 formatter.printHelp( "json-roller", options );
                 System.exit(0);
+            }
+
+            if (cmd.hasOption("k"))
+            {
+                String[] keys = cmd.getOptionValue("k", "").split(",");
+                keyLayers = Arrays.asList( keys );
             }
 
             if (cmd.hasOption("v"))
@@ -110,6 +117,18 @@ public class JSONRoller
         }
     }
     
+    public static String layerKey(int layer)
+    {
+        String returnKey = "layer" + String.valueOf(layer) + "key";
+        try
+        {
+            returnKey = keyLayers.get(layer);
+        } catch (Exception e) {
+            //forgit it
+        }
+        return returnKey;
+    }
+
     public static void logIt(String text)
     {
         if (JSONRoller.verbose)
@@ -169,7 +188,7 @@ public class JSONRoller
             if (value instanceof JSONObject)
             {
                 JSONObject obj = (JSONObject) value;
-                String newField = "layer" + String.valueOf(layer) + "key";
+                String newField = layerKey(layer);
                 addToAllRecords.put(newField, field);
                 if (isNestedJSONObjects(obj))
                 {

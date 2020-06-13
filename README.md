@@ -1,7 +1,21 @@
 ## JSON-Roller ##
 
-JSON Roller is a tool for flattening complex JSON data structures into tables. 
+JSON Roller is a tool for flattening complex JSON data structures into tables. I know there are a lot of tools that perform this exact function, but json-roller is fast and native!
 
+Using a test file movies.json (3.22 Megs, 3 layers of data)
+```
+$ time json-roller -i movies.json -c movies.csv
+
+real    0m1.318s
+user    0m1.000s
+sys     0m0.313s
+
+$ wc movies.csv
+  28796  173765 3130845 movies.csv
+```
+That's 28,796 records in 1.318 seconds!
+
+** How do i use it? **
 ```
 usage: json-roller
  -?,--help          Shows help
@@ -90,9 +104,10 @@ This tool really shines when dealing with more complex data structures, lets try
 }
 ```
 
-Lets run the tool again with verbose logging enabled.
+Lets run the tool again with verbose logging enabled. This time we are going to
+output a Markdown file for ease of viewing.
 ```
-json-roller -v -i ~/brian/Desktop/people.json -c people.csv
+json-roller -v -i people.json -m people.md
 Root JSONObject detected
 Columns Created: layer1key, extra, name, layer0key, age
 ```
@@ -107,3 +122,23 @@ Result:
 | 4432      |       | Bob   | IT Dept   | 34  |
 | 14535     | stuff | Mark  | IT Dept   | 31  |
 
+
+As you can see the data structure was still flattened, with new columns created
+for dept and user_id, (layer0key and layer1key). If the names of the keys are known
+in advance you can provide the -k option to add key names based on layer.
+
+```
+json-roller -v -i people.json -m people.md -k dept,user_id
+Root JSONObject detected
+Columns Created: user_id, extra, name, dept, age
+```
+
+Result:
+| user_id   | extra | name  | dept      | age |
+|-----------|-------|-------|-----------|-----|
+| 387532    |       | Karen | Sales     | 22  |
+| 142348    | stuff | Lenny | Sales     | 25  |
+| 531241    |       | Joe   | Sales     | 30  |
+| 43232     |       | Erin  | IT Dept   | 27  |
+| 4432      |       | Bob   | IT Dept   | 34  |
+| 14535     | stuff | Mark  | IT Dept   | 31  |
