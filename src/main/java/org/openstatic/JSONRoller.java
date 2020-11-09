@@ -27,8 +27,6 @@ import java.io.InputStream;
 import java.util.regex.Pattern;
 
 import org.apache.commons.cli.*;
-import org.json.JSONArray;
-
 import org.json.*;
 
 public class JSONRoller
@@ -143,13 +141,32 @@ public class JSONRoller
         {
             if (data.startsWith("["))
             {
-                logIt("Root JSONArray detected");
+                logIt("Format detected: Root JSONArray");
                 JSONArray ary = new JSONArray(data);
                 return ary;
             } else if (data.startsWith("{")) {
-                logIt("Root JSONObject detected");
-                JSONObject obj = new JSONObject(data);
-                return new JSONArray(pivotJSONObject(new JSONObject(), 0, obj));
+                if (data.contains("}\n{") || data.contains("}\r\n{"))
+                {
+                    logIt("Format detected: 1 object per line");
+                    StringTokenizer st = new StringTokenizer(data, "\r\n");
+                    JSONArray arr = new JSONArray();
+                    while(st.hasMoreTokens())
+                    {
+                        String str = st.nextToken();
+                        try
+                        {
+                            if (!"".equals(str) && str != null)
+                            {
+                                arr.put(new JSONObject(str));
+                            }
+                        } catch (Exception strEx) {}
+                    }
+                    return arr;
+                } else {
+                    logIt("Format detected: Root JSONObject");
+                    JSONObject obj = new JSONObject(data);
+                    return new JSONArray(pivotJSONObject(new JSONObject(), 0, obj));
+                }
             }
         } catch (Exception e) {
             e.printStackTrace(System.err);
