@@ -66,7 +66,7 @@ public class JSONRoller
             if (cmd.hasOption("?"))
             {
                 HelpFormatter formatter = new HelpFormatter();
-                formatter.printHelp( "json-roller", options );
+                formatter.printHelp( "json-roller", "JSON Roller: A tool for flattening a JSON structure into a table" + System.lineSeparator() + "Project Page - https://openstatic.org/projects/json-roller/", options, "" );
                 System.exit(0);
             }
 
@@ -220,21 +220,74 @@ public class JSONRoller
         return returnList;
     }
 
+    
     // Merge two JSONObjects together, object b may overwrite object a's keys
     public static JSONObject mergeJSONObjects(JSONObject a, JSONObject b)
     {
         JSONObject ro = new JSONObject();
-        for(Iterator<String> fieldIterator = a.keys(); fieldIterator.hasNext(); )
+        if (a != null)
         {
-            String field = fieldIterator.next();
-            Object value = a.get(field);
-            ro.put(field,value);
+            // Add all of A's fields
+            for(Iterator<String> fieldIterator = a.keys(); fieldIterator.hasNext(); )
+            {
+                String field = fieldIterator.next();
+                Object value = a.get(field);
+                ro.put(field,value);
+            }
         }
-        for(Iterator<String> fieldIterator = b.keys(); fieldIterator.hasNext(); )
+        if (b != null)
         {
-            String field = fieldIterator.next();
-            Object value = b.get(field);
-            ro.put(field,value);
+            // Go through B and merge add its fields.
+            for(Iterator<String> fieldIterator = b.keys(); fieldIterator.hasNext(); )
+            {
+                String field = fieldIterator.next();
+                Object value = b.get(field);
+                if (ro.opt(field) instanceof JSONObject && value instanceof JSONObject)
+                {
+                    ro.put(field, mergeJSONObjects((JSONObject) ro.opt(field), (JSONObject) value));
+                } else {
+                    ro.put(field, value);
+                }
+            }
+        }
+        return ro;
+    }
+
+    // Compare two JSONObjects, create a third object showing b's differences from a
+    // this will only include new keys that A doesn't contain or changes to existing keys
+    public static JSONObject diffJSONObjects(JSONObject a, JSONObject b)
+    {
+        JSONObject ro = new JSONObject();
+        // Add all of A's fields
+        if (b != null)
+        {
+            // Scan all subobjects on b for updates to a
+            for(Iterator<String> fieldIterator = a.keys(); fieldIterator.hasNext(); )
+            {
+                String field = fieldIterator.next();
+                Object a_value = a.get(field);
+                Object b_value = b.opt(field);
+                if (a_value instanceof JSONObject && b_value instanceof JSONObject)
+                {
+                    JSONObject diffReturn = diffJSONObjects((JSONObject) a_value, (JSONObject) b_value);
+                    if (diffReturn.length() > 0)
+                    {
+                        ro.put(field, diffReturn);
+                    }
+                } else if (!a_value.equals(b_value)) {
+                    ro.put(field, b_value);
+                }
+            }
+
+            // Add keys missing from A as part of the diff
+            for(Iterator<String> fieldIterator = b.keys(); fieldIterator.hasNext(); )
+            {
+                String field = fieldIterator.next();
+                Object b_value = b.get(field);
+                if (!a.has(field)) {
+                    ro.put(field, b_value);
+                }
+            }
         }
         return ro;
     }

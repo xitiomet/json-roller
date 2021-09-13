@@ -103,13 +103,8 @@
                 <buildArgs>
                     --no-server
                     --no-fallback
-                    -H:+ReportExceptionStackTraces
-                    -H:+TraceClassInitialization
-                    -H:+ReportUnsupportedElementsAtRuntime
-                    -H:Log=registerResource:
-                    -H:+UseServiceLoaderFeature
-                    -Dgraal.LogFile=graal.log
-                    -H:EnableURLProtocols=http,https
+                    --enable-https
+                    --enable-http
                 </buildArgs>
             </configuration>
        </plugin>
