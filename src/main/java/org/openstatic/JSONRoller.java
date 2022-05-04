@@ -1,13 +1,10 @@
 package org.openstatic;
 
-import java.util.Vector;
 import java.util.Collection;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.StringTokenizer;
-import java.util.Enumeration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.stream.*;
@@ -15,8 +12,6 @@ import java.util.List;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.PrintWriter;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
@@ -39,35 +34,34 @@ public class JSONRoller
         File inFile = null;
         String data = "";
         String basename = "json-roller-data";
+        Options options = new Options();
+        CommandLineParser parser = new DefaultParser();
+
+        options.addOption(new Option("v", "verbose", false, "Be Verbose"));
+        options.addOption(new Option("?", "help", false, "Shows help"));
+
+        options.addOption(new Option("i", "input", true, "Input file .json only"));
+        options.addOption(new Option("u", "url", true, "URL to read json from"));
+        options.addOption(new Option("k", "key-layers", true, "Comma seperated list of key layers for nested structures."));
+        Option csvOption = new Option("c", "csv", true, "Output CSV file");
+        csvOption.setOptionalArg(true);
+        options.addOption(csvOption);
+
+        Option tsvOption = new Option("t", "tsv", true, "Output TSV file");
+        tsvOption.setOptionalArg(true);
+        options.addOption(tsvOption);
+
+        Option mdOption = new Option("m", "md", true, "Output Markdown file");
+        mdOption.setOptionalArg(true);
+        options.addOption(mdOption);
         try
         {
-            Options options = new Options();
-            CommandLineParser parser = new DefaultParser();
-
-            options.addOption(new Option("v", "verbose", false, "Be Verbose"));
-            options.addOption(new Option("?", "help", false, "Shows help"));
             
-            options.addOption(new Option("i", "input", true, "Input file .json only"));
-            options.addOption(new Option("u", "url", true, "URL to read json from"));
-            options.addOption(new Option("k", "key-layers", true, "Comma seperated list of key layers for nested structures."));
-            Option csvOption = new Option("c", "csv", true, "Output CSV file");
-            csvOption.setOptionalArg(true);
-            options.addOption(csvOption);
-
-            Option tsvOption = new Option("t", "tsv", true, "Output TSV file");
-            tsvOption.setOptionalArg(true);
-            options.addOption(tsvOption);
-
-            Option mdOption = new Option("m", "md", true, "Output Markdown file");
-            mdOption.setOptionalArg(true);
-            options.addOption(mdOption);
             cmd = parser.parse(options, args);
 
             if (cmd.hasOption("?"))
             {
-                HelpFormatter formatter = new HelpFormatter();
-                formatter.printHelp( "json-roller", "JSON Roller: A tool for flattening a JSON structure into a table" + System.lineSeparator() + "Project Page - https://openstatic.org/projects/json-roller/", options, "" );
-                System.exit(0);
+                showHelp(options);
             }
 
             if (cmd.hasOption("k"))
@@ -111,8 +105,15 @@ public class JSONRoller
                 OutputData.writeMarkdown(new File(cmd.getOptionValue("m", basename + ".md")), csvData);
             }
         } catch (Exception e) {
-            e.printStackTrace(System.err);
+            showHelp(options);
         }
+    }
+
+    public static void showHelp(Options options)
+    {
+        HelpFormatter formatter = new HelpFormatter();
+        formatter.printHelp( "json-roller", "JSON Roller: A tool for flattening a JSON structure into a table" + System.lineSeparator() + "Project Page - https://openstatic.org/projects/json-roller/", options, "" );
+        System.exit(0);
     }
     
     public static String layerKey(int layer)
@@ -193,7 +194,7 @@ public class JSONRoller
         21,  bob,  abc
         41,  tom,  abd
 
-        This function will find the deepest layer, and transform all key layers into columnts
+        This function will find the deepest layer, and transform all key layers into columns
     */
     public static List<JSONObject> pivotJSONObject(JSONObject addToAllRecords, int layer, JSONObject jo) throws CloneNotSupportedException
     {

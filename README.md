@@ -1,6 +1,6 @@
 ## JSON-Roller ##
 
-JSON Roller is a tool for flattening complex JSON data structures into tables. I know there are a lot of tools that perform this exact function, but json-roller is fast and native!
+JSON Roller is a tool for flattening complex JSON data structures into tables. I know there are a lot of tools that perform this exact function, but json-roller is fast and native! I often found myself in need of a tool to convert large chucks of json records into something i could share in an excel friendly format, this is the main purpose of json-roller.
 
 Using a test file movies.json (3.22 Megs, 3 layers of data)
 ```bash
@@ -112,7 +112,7 @@ Root JSONObject detected
 Columns Created: layer1key, extra, name, layer0key, age
 ```
 
-Result:
+Result (note if you are viewing this on my website, the markdown is probably being rendered to a table):
 | layer1key | extra | name  | layer0key | age |
 |-----------|-------|-------|-----------|-----|
 | 387532    |       | Karen | Sales     | 22  |
