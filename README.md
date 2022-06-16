@@ -18,10 +18,20 @@ That's 28,796 records in 1.318 seconds!
 ** How do i use it? **
 ```bash
 usage: json-roller
+JSON Roller: A tool for flattening a JSON structure into a table
+Project Page - https://openstatic.org/projects/json-roller/
  -?,--help          Shows help
  -c,--csv <arg>     Output CSV file
+ -d,--dissect       Dissect JSON data into each nested key value pair
+                    (STDOUT)
+ -e,--merge         Merge all input objects into a single object (STDOUT)
  -i,--input <arg>   Input file .json only
+ -k,--keys <arg>    Comma seperated list of keys for nested structures.
+                    Used to replace layer0key,layer1key or provide keys
+                    for nesting
  -m,--md <arg>      Output Markdown file
+ -p,--properties    Dissect JSON data into properties for each nested key
+                    value pair (STDOUT)
  -t,--tsv <arg>     Output TSV file
  -u,--url <arg>     URL to read json from
  -v,--verbose       Be Verbose

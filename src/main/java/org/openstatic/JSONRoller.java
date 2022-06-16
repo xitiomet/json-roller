@@ -3,6 +3,7 @@ package org.openstatic;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.ArrayList;
@@ -19,7 +20,6 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.regex.Pattern;
 
 import org.apache.commons.cli.*;
 import org.json.*;
@@ -42,7 +42,11 @@ public class JSONRoller
 
         options.addOption(new Option("i", "input", true, "Input file .json only"));
         options.addOption(new Option("u", "url", true, "URL to read json from"));
-        options.addOption(new Option("k", "key-layers", true, "Comma seperated list of key layers for nested structures."));
+        options.addOption(new Option("d", "dissect", false, "Dissect JSON data into each nested key value pair (STDOUT)"));
+        options.addOption(new Option("p", "properties", false, "Dissect JSON data into properties for each nested key value pair (STDOUT)"));
+        options.addOption(new Option("e", "merge", false, "Merge all input objects into a single object (STDOUT)"));
+
+        options.addOption(new Option("k", "keys", true, "Comma seperated list of keys for nested structures. Used to replace layer0key,layer1key or provide keys for nesting"));
         Option csvOption = new Option("c", "csv", true, "Output CSV file");
         csvOption.setOptionalArg(true);
         options.addOption(csvOption);
@@ -54,6 +58,7 @@ public class JSONRoller
         Option mdOption = new Option("m", "md", true, "Output Markdown file");
         mdOption.setOptionalArg(true);
         options.addOption(mdOption);
+
         try
         {
             
@@ -89,22 +94,77 @@ public class JSONRoller
                 System.exit(0);
             }
 
-            JSONArray ja = readJSONData(data);
-            List<String[]> csvData = JSONArrayFlatten(ja);
+            JSONArray workingData = readJSONData(data);
 
-            if (cmd.hasOption("c"))
+            // Here are all our pivoted outputs
+            if (cmd.hasOption("c") || cmd.hasOption("t") || cmd.hasOption("m"))
             {
-                OutputData.writeCSV(new File(cmd.getOptionValue("c", basename + ".csv")), csvData);
+                JSONArray pivotedData = workingData;
+                if (workingData.length() == 1)
+                {
+                    logIt("Singular Object Detected: performing table pivot");
+                    pivotedData = new JSONArray(pivotJSONObject(new JSONObject(), 0, workingData.getJSONObject(0)));
+                }
+                List<String[]> csvData = JSONArrayFlatten(pivotedData);
+
+                if (cmd.hasOption("c"))
+                {
+                    OutputData.writeCSV(new File(cmd.getOptionValue("c", basename + ".csv")), csvData);
+                }
+                if (cmd.hasOption("t"))
+                {
+                    OutputData.writeTSV(new File(cmd.getOptionValue("t", basename + ".tsv")), csvData);
+                }
+                if (cmd.hasOption("m"))
+                {
+                    OutputData.writeMarkdown(new File(cmd.getOptionValue("m", basename + ".md")), csvData);
+                }
             }
-            if (cmd.hasOption("t"))
+
+            if (cmd.hasOption("d"))
             {
-                OutputData.writeTSV(new File(cmd.getOptionValue("t", basename + ".tsv")), csvData);
+                try
+                {
+                    Collection<String> disectedJSON = dissectJSONData(workingData);
+                    disectedJSON.forEach((line) -> {
+                        System.out.println(line);
+                    });
+                } catch (Exception e2) {
+                    if (JSONRoller.verbose)
+                        e2.printStackTrace(System.err);
+                }
             }
-            if (cmd.hasOption("m"))
+            if (cmd.hasOption("e"))
             {
-                OutputData.writeMarkdown(new File(cmd.getOptionValue("m", basename + ".md")), csvData);
+                try
+                {
+                    JSONObject mergedJSON = mergeJSONData(workingData);
+                    System.out.println(mergedJSON.toString());
+                } catch (Exception e2) {
+                    if (JSONRoller.verbose)
+                        e2.printStackTrace(System.err);
+                }
+            }
+            if (cmd.hasOption("p"))
+            {
+                try
+                {
+                    if (workingData.length() == 1)
+                    {
+                        Properties properties = JSONTools.dissectPropertiesFromJSONObject(workingData.getJSONObject(0));
+                        properties.store(System.out, null);
+                    } else {
+                        Properties properties = JSONTools.dissectPropertiesFromJSONArray(workingData);
+                        properties.store(System.out, null);
+                    }
+                } catch (Exception e2) {
+                    if (JSONRoller.verbose)
+                        e2.printStackTrace(System.err);
+                }
             }
         } catch (Exception e) {
+            if (JSONRoller.verbose)
+                e.printStackTrace(System.err);
             showHelp(options);
         }
     }
@@ -123,7 +183,7 @@ public class JSONRoller
         {
             returnKey = keyLayers.get(layer);
         } catch (Exception e) {
-            //forgit it
+            //forget it
         }
         return returnKey;
     }
@@ -134,6 +194,48 @@ public class JSONRoller
         {
             System.err.println(text);
         }
+    }
+
+    public static JSONObject mergeJSONData(JSONArray data)
+    {
+        JSONObject returnObject = new JSONObject();
+        try
+        {
+            for (int m = 0; m < data.length(); m++)
+            {
+                Object o = data.get(m);
+                if (o instanceof JSONObject)
+                {
+                    JSONObject aJsonObject = (JSONObject) o;
+                    returnObject = JSONTools.mergeJSONObjects(returnObject, aJsonObject);
+                }
+            }
+        } catch (Exception e) {
+            if (JSONRoller.verbose) 
+                e.printStackTrace(System.err);
+        }
+        return returnObject;
+    }
+
+    public static Collection<String> dissectJSONData(JSONArray data)
+    {
+        ArrayList<String> returnObjects = new ArrayList<String>();
+        try
+        {
+            data.forEach((o) -> {
+                if (o instanceof JSONObject)
+                {
+                    JSONObject aJsonObject = (JSONObject) o;
+                    returnObjects.addAll(JSONTools.dissectJSONObject(aJsonObject).stream().map((x)->x.toString()).collect(Collectors.toList()));
+                } else {
+                    returnObjects.add((String) o);
+                }
+            });
+        } catch (Exception e) {
+            if (JSONRoller.verbose)
+                e.printStackTrace(System.err);
+        }
+        return returnObjects;
     }
 
     public static JSONArray readJSONData(String data)
@@ -166,11 +268,14 @@ public class JSONRoller
                 } else {
                     logIt("Format detected: Root JSONObject");
                     JSONObject obj = new JSONObject(data);
-                    return new JSONArray(pivotJSONObject(new JSONObject(), 0, obj));
+                    JSONArray ja = new JSONArray();
+                    ja.put(obj);
+                    return ja;
                 }
             }
         } catch (Exception e) {
-            e.printStackTrace(System.err);
+            if (JSONRoller.verbose)
+                e.printStackTrace(System.err);
         }
         return new JSONArray();
     }
@@ -203,6 +308,7 @@ public class JSONRoller
         {
             String field = fieldIterator.next();
             Object value = jo.get(field);
+            //System.err.println("Layer " + String.valueOf(layer) + " - " + field + " = " + value.toString());
             if (value instanceof JSONObject)
             {
                 JSONObject obj = (JSONObject) value;
@@ -210,87 +316,33 @@ public class JSONRoller
                 addToAllRecords.put(newField, field);
                 if (isNestedJSONObjects(obj))
                 {
-                    returnList.addAll(pivotJSONObject(addToAllRecords, layer+1, obj));
+                    returnList.addAll(pivotJSONObject(new JSONObject(addToAllRecords.toString()), layer+1, obj));
                 } else {
-                    returnList.add(mergeJSONObjects(addToAllRecords,obj));
+                    returnList.add(JSONTools.mergeJSONObjects(addToAllRecords,obj));
+                }
+            } else if (value instanceof JSONArray) {
+                JSONArray ary = (JSONArray) value;
+                JSONObject obj = new JSONObject();
+                for(int i = 0; i < ary.length(); i++)
+                {
+                    obj.put("[" + String.valueOf(i) + "]", ary.get(i));
+                }
+                String newField = layerKey(layer);
+                //System.err.println("pre Want to add to all records " + addToAllRecords.toString());
+
+                addToAllRecords.put(newField, field);
+                //System.err.println("post Want to add to all records " + addToAllRecords.toString());
+                if (isNestedJSONObjects(obj))
+                {
+                    returnList.addAll(pivotJSONObject(new JSONObject(addToAllRecords.toString()), layer+1,obj));
+                } else {
+                    returnList.add(JSONTools.mergeJSONObjects(addToAllRecords,obj));
                 }
             } else {
-
+                logIt("Discarded " + field + " on layer " + String.valueOf(layer));
             }
         }
         return returnList;
-    }
-
-    
-    // Merge two JSONObjects together, object b may overwrite object a's keys
-    public static JSONObject mergeJSONObjects(JSONObject a, JSONObject b)
-    {
-        JSONObject ro = new JSONObject();
-        if (a != null)
-        {
-            // Add all of A's fields
-            for(Iterator<String> fieldIterator = a.keys(); fieldIterator.hasNext(); )
-            {
-                String field = fieldIterator.next();
-                Object value = a.get(field);
-                ro.put(field,value);
-            }
-        }
-        if (b != null)
-        {
-            // Go through B and merge add its fields.
-            for(Iterator<String> fieldIterator = b.keys(); fieldIterator.hasNext(); )
-            {
-                String field = fieldIterator.next();
-                Object value = b.get(field);
-                if (ro.opt(field) instanceof JSONObject && value instanceof JSONObject)
-                {
-                    ro.put(field, mergeJSONObjects((JSONObject) ro.opt(field), (JSONObject) value));
-                } else {
-                    ro.put(field, value);
-                }
-            }
-        }
-        return ro;
-    }
-
-    // Compare two JSONObjects, create a third object showing b's differences from a
-    // this will only include new keys that A doesn't contain or changes to existing keys
-    public static JSONObject diffJSONObjects(JSONObject a, JSONObject b)
-    {
-        JSONObject ro = new JSONObject();
-        // Add all of A's fields
-        if (b != null)
-        {
-            // Scan all subobjects on b for updates to a
-            for(Iterator<String> fieldIterator = a.keys(); fieldIterator.hasNext(); )
-            {
-                String field = fieldIterator.next();
-                Object a_value = a.get(field);
-                Object b_value = b.opt(field);
-                if (a_value instanceof JSONObject && b_value instanceof JSONObject)
-                {
-                    JSONObject diffReturn = diffJSONObjects((JSONObject) a_value, (JSONObject) b_value);
-                    if (diffReturn.length() > 0)
-                    {
-                        ro.put(field, diffReturn);
-                    }
-                } else if (!a_value.equals(b_value)) {
-                    ro.put(field, b_value);
-                }
-            }
-
-            // Add keys missing from A as part of the diff
-            for(Iterator<String> fieldIterator = b.keys(); fieldIterator.hasNext(); )
-            {
-                String field = fieldIterator.next();
-                Object b_value = b.get(field);
-                if (!a.has(field)) {
-                    ro.put(field, b_value);
-                }
-            }
-        }
-        return ro;
     }
 
     // Check if this JSONObject is just a collection of other JSONObjects.
@@ -467,7 +519,8 @@ public class JSONRoller
                 }
             }
         } catch (Exception e) {
-            e.printStackTrace(System.err);
+            if (JSONRoller.verbose)
+                e.printStackTrace(System.err);
         }
         return returnMap;
     }
