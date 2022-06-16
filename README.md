@@ -25,7 +25,7 @@ Project Page - https://openstatic.org/projects/json-roller/
  -d,--dissect       Dissect JSON data into each nested key value pair
                     (STDOUT)
  -e,--merge         Merge all input objects into a single object (STDOUT)
- -i,--input <arg>   Input file .json only
+ -i,--input <arg>   Input file .json only use commas for multiple files
  -k,--keys <arg>    Comma seperated list of keys for nested structures.
                     Used to replace layer0key,layer1key or provide keys
                     for nesting
@@ -123,6 +123,7 @@ Columns Created: layer1key, extra, name, layer0key, age
 ```
 
 Result (note if you are viewing this on my website, the markdown is probably being rendered to a table):
+
 | layer1key | extra | name  | layer0key | age |
 |-----------|-------|-------|-----------|-----|
 | 387532    |       | Karen | Sales     | 22  |
@@ -144,6 +145,7 @@ Columns Created: user_id, extra, name, dept, age
 ```
 
 Result:
+
 | user_id   | extra | name  | dept      | age |
 |-----------|-------|-------|-----------|-----|
 | 387532    |       | Karen | Sales     | 22  |
