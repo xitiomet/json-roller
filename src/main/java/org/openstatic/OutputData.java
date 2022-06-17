@@ -1,6 +1,5 @@
 package org.openstatic;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.List;
@@ -9,13 +8,11 @@ import java.util.stream.Stream;
 
 public class OutputData 
 {
-    public static void writeCSV(File csvOutputFile, List<String[]> dataLines) throws IOException 
+    public static void writeCSV(PrintWriter pw, List<String[]> dataLines) throws IOException 
     {
-        try (PrintWriter pw = new PrintWriter(csvOutputFile)) {
-            dataLines.stream()
-              .map(OutputData::convertToCSV)
-              .forEach(pw::println);
-        }
+        dataLines.stream()
+            .map(OutputData::convertToCSV)
+            .forEach(pw::println);
     }
     
     public static String convertToCSV(String[] data)
@@ -35,13 +32,11 @@ public class OutputData
         return escapedData;
     }
 
-    public static void writeTSV(File csvOutputFile, List<String[]> dataLines) throws IOException 
+    public static void writeTSV(PrintWriter pw, List<String[]> dataLines) throws IOException 
     {
-        try (PrintWriter pw = new PrintWriter(csvOutputFile)) {
-            dataLines.stream()
-              .map(OutputData::convertToTSV)
-              .forEach(pw::println);
-        }
+        dataLines.stream()
+            .map(OutputData::convertToTSV)
+            .forEach(pw::println);
     }
     
     public static String convertToTSV(String[] data)
@@ -57,9 +52,8 @@ public class OutputData
         return escapedData;
     }
 
-    public static void writeMarkdown(File csvOutputFile, List<String[]> dataLines) throws IOException 
+    public static void writeMarkdown(PrintWriter pw, List<String[]> dataLines) throws IOException 
     {
-        PrintWriter pw = new PrintWriter(csvOutputFile);
         boolean firstLine = true;
         int[] columnSizes = new int[dataLines.get(0).length];
         for(String[] row : dataLines)

@@ -20,6 +20,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.PrintWriter;
 
 import org.apache.commons.cli.*;
 import org.json.*;
@@ -31,7 +32,6 @@ public class JSONRoller
     public static void main(String[] args) throws IOException 
     {
         CommandLine cmd = null;
-        String basename = "json-roller-data";
         Options options = new Options();
         CommandLineParser parser = new DefaultParser();
 
@@ -41,23 +41,38 @@ public class JSONRoller
         Option inputOption = new Option("i", "input", true, "Input file .json only use commas for multiple files");
         inputOption.setValueSeparator(',');
         inputOption.setOptionalArg(true);
+        inputOption.setArgName("filename");
         options.addOption(inputOption);
         options.addOption(new Option("u", "url", true, "URL to read json from"));
         options.addOption(new Option("d", "dissect", false, "Dissect JSON data into each nested key value pair (STDOUT)"));
-        options.addOption(new Option("p", "properties", false, "Dissect JSON data into properties for each nested key value pair (STDOUT)"));
-        options.addOption(new Option("e", "merge", false, "Merge all input objects into a single object (STDOUT)"));
 
-        options.addOption(new Option("k", "keys", true, "Comma seperated list of keys for nested structures. Used to replace layer0key,layer1key or provide keys for nesting"));
-        Option csvOption = new Option("c", "csv", true, "Output CSV file");
+        Option propOption = new Option("p", "properties", true, "Dissect JSON data into properties for each nested key value pair (exclude filename for STDOUT)");
+        propOption.setArgName("filename.ini");
+        propOption.setOptionalArg(true);
+        options.addOption(propOption);
+        
+        Option mergeOption = new Option("e", "merge", true, "Merge all input objects into a single object (STDOUT) optional numerical argument to format the data using spaces");
+        mergeOption.setOptionalArg(true);
+        mergeOption.setArgName("spaces");
+        options.addOption(mergeOption);
+
+        Option keyOption = new Option("k", "keys", true, "Comma seperated list of keys for nested structures. Used to replace layer0key,layer1key or provide keys for nesting");
+        keyOption.setArgName("key1,key2");
+        options.addOption(keyOption);
+
+        Option csvOption = new Option("c", "csv", true, "Output Table CSV file (exclude filename for STDOUT)");
         csvOption.setOptionalArg(true);
+        csvOption.setArgName("filename.csv");
         options.addOption(csvOption);
 
-        Option tsvOption = new Option("t", "tsv", true, "Output TSV file");
+        Option tsvOption = new Option("t", "tsv", true, "Output Table TSV file (exclude filename for STDOUT)");
         tsvOption.setOptionalArg(true);
+        tsvOption.setArgName("filename.tsv");
         options.addOption(tsvOption);
 
-        Option mdOption = new Option("m", "md", true, "Output Markdown file");
+        Option mdOption = new Option("m", "md", true, "Output Markdown Table file (exclude filename for STDOUT)");
         mdOption.setOptionalArg(true);
+        mdOption.setArgName("filename.md");
         options.addOption(mdOption);
 
         try
@@ -92,8 +107,6 @@ public class JSONRoller
                     {
                         logIt("Reading File: " + filename);
                         File inFile = new File(filename);
-                        if ("json-roller-data".equals(basename))
-                            basename = inFile.getName().split("\\.(?=[^\\.]+$)")[0];
                         String data = (new String(Files.readAllBytes(Paths.get(inFile.toURI())), StandardCharsets.UTF_8));
                         readJSONData(data).forEach((o) -> {
                             workingData.put(o);
@@ -119,7 +132,7 @@ public class JSONRoller
             } 
             if (workingData.length() == 0)
             {
-                System.err.println("You must specify an input file -i [filename] or url -u [url]");
+                System.err.println("You must specify an input file -i [filename] or url -u [url] use -? for help!");
                 System.exit(0);
             } else {
                 logIt("Root Objects: " + workingData.length());
@@ -139,15 +152,48 @@ public class JSONRoller
 
                 if (cmd.hasOption("c"))
                 {
-                    OutputData.writeCSV(new File(cmd.getOptionValue("c", basename + ".csv")), csvData);
+                    String optionalArg = cmd.getOptionValue("c");
+                    if (optionalArg != null)
+                    {
+                        File csvOutputFile = new File(optionalArg);
+                        try (PrintWriter pw = new PrintWriter(csvOutputFile)) {
+                            OutputData.writeCSV(pw, csvData);
+                        }
+                    } else {
+                        try (PrintWriter pw = new PrintWriter(System.out)) {
+                            OutputData.writeCSV(pw, csvData);
+                        }
+                    }
                 }
                 if (cmd.hasOption("t"))
                 {
-                    OutputData.writeTSV(new File(cmd.getOptionValue("t", basename + ".tsv")), csvData);
+                    String optionalArg = cmd.getOptionValue("t");
+                    if (optionalArg != null)
+                    {
+                        File tsvOutputFile = new File(optionalArg);
+                        try (PrintWriter pw = new PrintWriter(tsvOutputFile)) {
+                            OutputData.writeTSV(pw, csvData);
+                        }
+                    } else {
+                        try (PrintWriter pw = new PrintWriter(System.out)) {
+                            OutputData.writeTSV(pw, csvData);
+                        }
+                    }
                 }
                 if (cmd.hasOption("m"))
                 {
-                    OutputData.writeMarkdown(new File(cmd.getOptionValue("m", basename + ".md")), csvData);
+                    String optionalArg = cmd.getOptionValue("m");
+                    if (optionalArg != null)
+                    {
+                        File mdOutputFile = new File(optionalArg);
+                        try (PrintWriter pw = new PrintWriter(mdOutputFile)) {
+                            OutputData.writeMarkdown(pw, csvData);
+                        }
+                    } else {
+                        try (PrintWriter pw = new PrintWriter(System.out)) {
+                            OutputData.writeMarkdown(pw, csvData);
+                        }
+                    }
                 }
             }
 
@@ -169,7 +215,13 @@ public class JSONRoller
                 try
                 {
                     JSONObject mergedJSON = mergeJSONData(workingData);
-                    System.out.println(mergedJSON.toString());
+                    String formatOption = cmd.getOptionValue("e");
+                    if (formatOption != null)
+                    {
+                        System.out.println(mergedJSON.toString(Integer.valueOf(formatOption).intValue()));
+                    } else {
+                        System.out.println(mergedJSON.toString());
+                    }
                 } catch (Exception e2) {
                     if (JSONRoller.verbose)
                         e2.printStackTrace(System.err);
@@ -179,14 +231,22 @@ public class JSONRoller
             {
                 try
                 {
+                    PrintWriter pw = new PrintWriter(System.out);
+                    String optionalArg = cmd.getOptionValue("p");
+                    if (optionalArg != null)
+                    {
+                        File iniOutputFile = new File(optionalArg);
+                        pw = new PrintWriter(iniOutputFile);
+                    } 
                     if (workingData.length() == 1)
                     {
                         Properties properties = JSONTools.dissectPropertiesFromJSONObject(workingData.getJSONObject(0));
-                        properties.store(System.out, "Generated by json-roller http://openstatic.org/projects/json-roller/");
+                        properties.store(pw, "Generated by json-roller http://openstatic.org/projects/json-roller/");
                     } else {
                         Properties properties = JSONTools.dissectPropertiesFromJSONArray(workingData);
-                        properties.store(System.out, "Generated by json-roller http://openstatic.org/projects/json-roller/");
+                        properties.store(pw, "Generated by json-roller http://openstatic.org/projects/json-roller/");
                     }
+                    pw.close();
                 } catch (Exception e2) {
                     if (JSONRoller.verbose)
                         e2.printStackTrace(System.err);
@@ -202,7 +262,7 @@ public class JSONRoller
     public static void showHelp(Options options)
     {
         HelpFormatter formatter = new HelpFormatter();
-        formatter.printHelp( "json-roller", "JSON Roller: A tool for flattening a JSON structure into a table" + System.lineSeparator() + "Project Page - https://openstatic.org/projects/json-roller/", options, "" );
+        formatter.printHelp( "json-roller", "JSON Roller: A tool for manipulating JSON and flattening complex structures into a simple table" + System.lineSeparator() + "Project Page - https://openstatic.org/projects/json-roller/", options, "" );
         System.exit(0);
     }
     
@@ -364,7 +424,7 @@ public class JSONRoller
                 //System.err.println("post Want to add to all records " + addToAllRecords.toString());
                 if (isNestedJSONObjects(obj))
                 {
-                    returnList.addAll(pivotJSONObject(new JSONObject(addToAllRecords.toString()), layer+1,obj));
+                    returnList.addAll(pivotJSONObject(new JSONObject(addToAllRecords.toString()), layer+1, obj));
                 } else {
                     returnList.add(JSONTools.mergeJSONObjects(addToAllRecords,obj));
                 }
