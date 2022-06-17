@@ -31,9 +31,10 @@ $ json-roller -i keys.json -k WHAT,STUFF -m
 
 
 As you can see, "container" layers are treated as fields in the final output. When passing data into json-roller there are 3 formats to consider
-    * Singular root object as the entire file (a full scan and pivot will be performed like above)
-    * one object per line (each is treated as a row, columns are created as needed)
-    * a singular root array with a json object as each entery (each object is treated as a row, columns are created as needed)
+
+ * Singular root object as the entire file (a full scan and pivot will be performed like above)
+ * one object per line (each is treated as a row, columns are created as needed)
+ * a singular root array with a json object as each entery (each object is treated as a row, columns are created as needed)
 
 Note: when inputing multiple files they are concatinated first and treated as above
 
