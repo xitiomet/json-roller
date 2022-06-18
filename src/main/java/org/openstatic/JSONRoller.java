@@ -29,6 +29,8 @@ public class JSONRoller
 {
     private static boolean verbose = false;
     private static List<String> keyLayers = new ArrayList<String>();
+    private static List<String> columnOrder = new ArrayList<String>();
+
     public static void main(String[] args) throws IOException 
     {
         CommandLine cmd = null;
@@ -370,6 +372,22 @@ public class JSONRoller
         return new JSONArray();
     }
 
+    public static void registerColumn(String name)
+    {
+        if (name != null)
+        {
+            if (!JSONRoller.columnOrder.contains(name))
+            {
+                columnOrder.add(name);
+            }
+        }
+    }
+
+    public static void registerColumns(Collection<String> names)
+    {
+        names.forEach((name) -> registerColumn(name));
+    }
+
     /*
         for converting nested keystructures
         Example:
@@ -404,10 +422,12 @@ public class JSONRoller
                 JSONObject obj = (JSONObject) value;
                 String newField = layerKey(layer);
                 addToAllRecords.put(newField, field);
+                registerColumn(newField);
                 if (isNestedJSONObjects(obj))
                 {
                     returnList.addAll(pivotJSONObject(new JSONObject(addToAllRecords.toString()), layer+1, obj));
                 } else {
+                    obj.keySet().forEach((k) -> registerColumn(k));
                     returnList.add(JSONTools.mergeJSONObjects(addToAllRecords,obj));
                 }
             } else if (value instanceof JSONArray) {
@@ -418,14 +438,13 @@ public class JSONRoller
                     obj.put("[" + String.valueOf(i) + "]", ary.get(i));
                 }
                 String newField = layerKey(layer);
-                //System.err.println("pre Want to add to all records " + addToAllRecords.toString());
-
                 addToAllRecords.put(newField, field);
-                //System.err.println("post Want to add to all records " + addToAllRecords.toString());
+                registerColumn(newField);
                 if (isNestedJSONObjects(obj))
                 {
                     returnList.addAll(pivotJSONObject(new JSONObject(addToAllRecords.toString()), layer+1, obj));
                 } else {
+                    obj.keySet().forEach((k) -> registerColumn(k));
                     returnList.add(JSONTools.mergeJSONObjects(addToAllRecords,obj));
                 }
             } else {
@@ -462,29 +481,60 @@ public class JSONRoller
                 if (value instanceof JSONObject)
                 {
                     Map<String, String> objectMapped = JSONObjectFlatten(null, (JSONObject) value);
-                    columns.addAll(objectMapped.keySet());
+                    Set<String> keySet = objectMapped.keySet();
+                    registerColumns(keySet);
+                    columns.addAll(keySet);
                     rows.add(objectMapped);
                 } else if (value instanceof JSONArray) {
                     Map<String, String> arrayMapped = JSONArrayFlatten(null, (JSONArray) value);
-                    columns.addAll(arrayMapped.keySet());
+                    Set<String> keySet = arrayMapped.keySet();
+                    registerColumns(keySet);
+                    columns.addAll(keySet);
                     arrayMapped = fillNulls(columns, arrayMapped);
                     rows.add(arrayMapped);
                 } else {
                     Map<String, String> stringMapped = objectToStringMap("[" + String.valueOf(m) + "]", value);
-                    columns.addAll(stringMapped.keySet());
+                    Set<String> keySet = stringMapped.keySet();
+                    registerColumns(keySet);
+                    columns.addAll(keySet);
                     rows.add(stringMapped);
                 }
             }
         }
-        logIt("Columns Created: " + String.join(", ", columns));
+        ArrayList<String> orderedKeys = new ArrayList<String>();
+        for(int i = 0; i < JSONRoller.columnOrder.size(); i ++)
+        {
+            String orderedKey = JSONRoller.columnOrder.get(i);
+            if (columns.contains(orderedKey))
+            {
+                orderedKeys.add(orderedKey);
+            }
+        }
+        logIt("Columns Created: " + String.join(", ", orderedKeys));
         ArrayList<String[]> dataLines = new ArrayList<String[]>();
-        dataLines.add(0,columns.toArray(new String[columns.size()]));
+        dataLines.add(0,orderedKeys.toArray(new String[orderedKeys.size()]));
         for(Map<String, String> mapRow : rows)
         {
-            Collection<String> values = fillNulls(columns, mapRow).values();
-            dataLines.add(values.toArray(new String[values.size()]));
+            dataLines.add(orderMap(orderedKeys, mapRow));
         }
         return dataLines;
+    }
+
+    // Check to make sure map contains all the keys, if not fill them with blanks.
+    public static String[] orderMap(List<String> keys, Map<String, String> map)
+    {
+        ArrayList<String> values = new ArrayList<String>();
+        for(Iterator<String> i = keys.iterator(); i.hasNext();)
+        {
+            String key = i.next();
+            if (map.containsKey(key))
+            {
+                values.add(map.get(key));
+            } else {
+                values.add("");
+            }
+        }
+        return values.toArray(new String[values.size()]);
     }
 
     // Check to make sure map contains all the keys, if not fill them with blanks.
@@ -507,6 +557,7 @@ public class JSONRoller
     // Recursive function for flattening JSONArrays. 
     public static Map<String, String> JSONArrayFlatten(String fieldName, JSONArray jarray) throws Exception
     {
+        registerColumn(fieldName);
         HashMap<String, String> returnMap = new HashMap<String, String>();
         for (int m = 0; m < jarray.length(); m++)
         {
@@ -541,6 +592,7 @@ public class JSONRoller
     // Recursive function for flattening JSONObjects. 
     public static Map<String, String> JSONObjectFlatten(String fieldName, JSONObject jo) throws Exception
     {
+        registerColumn(fieldName);
         HashMap<String, String> returnMap = new HashMap<String, String>();
         for(Iterator<String> fieldIterator = jo.keys(); fieldIterator.hasNext(); )
         {
@@ -575,6 +627,7 @@ public class JSONRoller
     // Make a map out of a String field, if that string field is a query string, call queryStringToStringMap
     public static Map<String, String> objectToStringMap(String fieldName, Object obj)
     {
+        registerColumn(fieldName);
         HashMap<String, String> returnMap = new HashMap<String, String>();
         if (obj != null)
         {
@@ -595,6 +648,7 @@ public class JSONRoller
     // Converts a query string to a Map
     public static Map<String, String> queryStringToStringMap(String fieldName, String queryString)
     {
+        registerColumn(fieldName);
         HashMap<String, String> returnMap = new HashMap<String, String>();
         try
         {

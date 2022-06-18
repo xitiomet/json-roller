@@ -234,7 +234,7 @@ $ json-roller -i movies.json -d | head -n 20
 {"movies":[null,{"id":2}]}
 ```
 
-Each non-jsonobject or array value is broken into its own object following the same structure as the original. Arrays are filled with nulls wherever index ordering needs to be preserved.
+Each non-json object or array value is broken into its own object following the same structure as the original. Arrays are filled with nulls wherever index ordering needs to be preserved.
 
 Another way to dissect json is as a bunch of properties
 ```bash
