@@ -24,17 +24,17 @@ Converting this to a table with the keys "WHAT","STUFF" would result in the foll
 $ json-roller -i keys.json -k WHAT,STUFF -m
 ```
 
-| numbers[1] | numbers[2] | numbers[0] | WHAT             | STUFF            |
-|------------|------------|------------|------------------|------------------|
-| 5          | 6          | 4          | anotherLayer1key | anotherLayer2key |
-| 2          | 3          | 1          | firstLayer1key   | firstLayer2key   |
+| WHAT             | STUFF            | numbers[0] | numbers[1] | numbers[2] |
+|------------------|------------------|------------|------------|------------|
+| anotherLayer1key | anotherLayer2key | 4          | 5          | 6          |
+| firstLayer1key   | firstLayer2key   | 1          | 2          | 3          |
 
 
 As you can see, "container" layers are treated as fields in the final output. When passing data into json-roller there are 3 formats to consider
 
  * Singular root object as the entire file (a full scan and pivot will be performed like above)
  * one object per line (each is treated as a row, columns are created as needed)
- * a singular root array with a json object as each entery (each object is treated as a row, columns are created as needed)
+ * a singular root array with a json object as each entry (each object is treated as a row, columns are created as needed)
 
 Note: when inputing multiple files they are concatinated first and treated as above
 

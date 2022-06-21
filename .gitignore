@@ -6,3 +6,4 @@ dependency-reduced-pom.xml
 .gradle
 config.json
 .DS_Store
+.vscode/
