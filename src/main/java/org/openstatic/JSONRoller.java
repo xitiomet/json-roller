@@ -70,7 +70,7 @@ public class JSONRoller
         csvOption.setArgName("filename.csv");
         options.addOption(csvOption);
 
-        Option jsonOption = new Option("j", "json", true, "Output Table as JSON file (exclude filename for STDOUT)");
+        Option jsonOption = new Option("j", "json", true, "Output Table as JSON Array file (exclude filename for STDOUT)");
         jsonOption.setOptionalArg(true);
         jsonOption.setArgName("filename.json");
         options.addOption(jsonOption);
