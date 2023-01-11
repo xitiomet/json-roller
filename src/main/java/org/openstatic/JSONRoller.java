@@ -65,6 +65,10 @@ public class JSONRoller
         keyOption.setArgName("key1,key2");
         options.addOption(keyOption);
 
+        Option filterOption = new Option("f", "filter", true, "Comma seperated list of filters (= != >= <= < >) output data will be limited by filters");
+        filterOption.setArgName("column=value,column!=value");
+        options.addOption(filterOption);
+
         Option csvOption = new Option("c", "csv", true, "Output Table CSV file (exclude filename for STDOUT)");
         csvOption.setOptionalArg(true);
         csvOption.setArgName("filename.csv");
@@ -177,6 +181,10 @@ public class JSONRoller
                 {
                     logIt("Singular Object Detected: performing table pivot");
                     pivotedData = new JSONArray(pivotJSONObject(new JSONObject(), 0, workingData.getJSONObject(0)));
+                }
+                if (cmd.hasOption("f"))
+                {
+                    pivotedData = filterData(pivotedData, cmd.getOptionValue("f"));
                 }
                 List<String[]> csvData = JSONArrayFlatten(pivotedData);
 
@@ -311,6 +319,131 @@ public class JSONRoller
         HelpFormatter formatter = new HelpFormatter();
         formatter.printHelp( "json-roller", "JSON Roller: A tool for manipulating JSON and flattening complex structures into a simple table, or converting csv data into JSON" + System.lineSeparator() + "Project Page - https://openstatic.org/projects/json-roller/", options, "" );
         System.exit(0);
+    }
+
+    public static JSONArray filterData(JSONArray source, String filtersString)
+    {
+        String[] filters = filtersString.split(",");
+        if (filters.length > 0)
+        {
+            if (JSONRoller.verbose)
+                System.err.println("Filters: " + filtersString);
+            JSONArray ra = new JSONArray();
+            for (int s = 0; s < source.length(); s++)
+            {
+                boolean filterPass = true;
+                JSONObject row = source.getJSONObject(s);
+                try
+                {
+                    for(int i = 0; i < filters.length; i++)
+                    {
+                        String filter = filters[i];
+                        if (filter.contains("!=")) 
+                        {
+                            String[] st = splitString(filter, "!=");
+                            String key = st[0];
+                            String value = st[1];
+                            if (row.optString(key, "").equals(value))
+                                filterPass = false;
+                        } else if (filter.contains(">=")) {
+                            String[] st = splitString(filter, ">=");
+                            String key = st[0];
+                            double value = Double.valueOf(st[1]).doubleValue();
+                            double rowValue = Double.valueOf(row.optString(key, "0")).doubleValue();
+                            if (rowValue < value)
+                                filterPass = false;
+                        } else if (filter.contains("<=")) {
+                            String[] st = splitString(filter, "<=");
+                            String key = st[0];
+                            double value = Double.valueOf(st[1]).doubleValue();
+                            double rowValue = Double.valueOf(row.optString(key, "0")).doubleValue();
+                            if (rowValue > value)
+                                filterPass = false;
+                        } else if (filter.contains("=")) {
+                            StringTokenizer st = new StringTokenizer(filter, "=");
+                            String key = st.nextToken();
+                            String value = st.nextToken();
+                            if (!row.optString(key, "").equals(value))
+                                filterPass = false;
+                        } else if (filter.contains(">")) {
+                            StringTokenizer st = new StringTokenizer(filter, ">");
+                            String key = st.nextToken();
+                            double value = Double.valueOf(st.nextToken()).doubleValue();
+                            double rowValue = Double.valueOf(row.optString(key, "0")).doubleValue();
+                            if (rowValue <= value)
+                                filterPass = false;
+                        } else if (filter.contains("<")) {
+                            StringTokenizer st = new StringTokenizer(filter, "<");
+                            String key = st.nextToken();
+                            double value = Double.valueOf(st.nextToken()).doubleValue();
+                            double rowValue = Double.valueOf(row.optString(key, "0")).doubleValue();
+                            if (rowValue >= value)
+                                filterPass = false;
+                        }
+                    }
+                } catch (Exception e) {
+                    if (JSONRoller.verbose)
+                        e.printStackTrace(System.err);
+                }
+                if (filterPass)
+                    ra.put(row);
+            };
+            return ra;
+        } else {
+            System.err.println("Empty Filter String");
+            return source;
+        }
+    }
+
+    // For splitting a string on multichar delimiters
+    public static final String[] splitString(String stringToSplit, String delimiter)
+    {
+        String[] aRet;
+        int iLast;
+        int iFrom;
+        int iFound;
+        int iRecords;
+  
+        // return Blank Array if stringToSplit == "")
+        if (stringToSplit.equals("")) {
+            return new String[0];
+        }
+  
+        // count Field Entries
+        iFrom = 0;
+        iRecords = 0;
+        while (true) {
+            iFound = stringToSplit.indexOf(delimiter, iFrom);
+            if (iFound == -1) {
+                break;
+            }
+            iRecords++;
+            iFrom = iFound + delimiter.length();
+        }
+        iRecords = iRecords + 1;
+  
+        // populate aRet[]
+        aRet = new String[iRecords];
+        if (iRecords == 1) {
+            aRet[0] = stringToSplit;
+        } else {
+            iLast = 0;
+            iFrom = 0;
+            iFound = 0;
+            for (int i = 0; i < iRecords; i++) {
+                iFound = stringToSplit.indexOf(delimiter, iFrom);
+                if (iFound == -1) { // at End
+                    aRet[i] = stringToSplit.substring(iLast + delimiter.length(), stringToSplit.length());
+                } else if (iFound == 0) { // at Beginning
+                    aRet[i] = "";
+                } else { // somewhere in middle
+                    aRet[i] = stringToSplit.substring(iFrom, iFound);
+                }
+                iLast = iFound;
+                iFrom = iFound + delimiter.length();
+            }
+        }
+        return aRet;
     }
     
     public static String layerKey(int layer)
