@@ -2,12 +2,34 @@ package org.openstatic;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 public class OutputData 
 {
+
+    public static void writeJSON(PrintWriter pw, List<String[]> dataLines) throws IOException 
+    {
+        List<String[]> data = new ArrayList<String[]>(dataLines);
+        JSONArray outputArray = new JSONArray();
+        String[] columns = data.get(0);
+        data.remove(0);
+        data.forEach((row) -> {
+            JSONObject rowObject = new JSONObject();
+            for(int i = 0; i < row.length; i++)
+            {
+                rowObject.put(columns[i], row[i]);
+            }
+            outputArray.put(rowObject);
+        });
+        pw.print(outputArray.toString(2));
+    }
+
     public static void writeCSV(PrintWriter pw, List<String[]> dataLines) throws IOException 
     {
         dataLines.stream()

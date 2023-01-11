@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.io.File;
+import java.io.FileReader;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
@@ -24,6 +25,8 @@ import java.io.PrintWriter;
 
 import org.apache.commons.cli.*;
 import org.json.*;
+
+import com.opencsv.CSVReader;
 
 public class JSONRoller
 {
@@ -40,7 +43,7 @@ public class JSONRoller
         options.addOption(new Option("v", "verbose", false, "Be Verbose"));
         options.addOption(new Option("?", "help", false, "Shows help"));
 
-        Option inputOption = new Option("i", "input", true, "Input file .json only use commas for multiple files");
+        Option inputOption = new Option("i", "input", true, "Input file .json or .csv only use commas for multiple files");
         inputOption.setValueSeparator(',');
         inputOption.setOptionalArg(true);
         inputOption.setArgName("filename");
@@ -66,6 +69,11 @@ public class JSONRoller
         csvOption.setOptionalArg(true);
         csvOption.setArgName("filename.csv");
         options.addOption(csvOption);
+
+        Option jsonOption = new Option("j", "json", true, "Output Table as JSON file (exclude filename for STDOUT)");
+        jsonOption.setOptionalArg(true);
+        jsonOption.setArgName("filename.json");
+        options.addOption(jsonOption);
 
         Option tsvOption = new Option("t", "tsv", true, "Output Table TSV file (exclude filename for STDOUT)");
         tsvOption.setOptionalArg(true);
@@ -108,11 +116,31 @@ public class JSONRoller
                     try
                     {
                         logIt("Reading File: " + filename);
-                        File inFile = new File(filename);
-                        String data = (new String(Files.readAllBytes(Paths.get(inFile.toURI())), StandardCharsets.UTF_8));
-                        readJSONData(data).forEach((o) -> {
-                            workingData.put(o);
-                        });
+                        if (filename.toLowerCase().endsWith(".csv"))
+                        {
+                            try (CSVReader reader = new CSVReader(new FileReader(filename))) 
+                            {
+                                List<String[]> r = reader.readAll();
+                                String[] columns = r.get(0);
+                                for(int i = 0; i < columns.length; i++)
+                                    registerColumn(columns[i]);
+                                r.remove(0);
+                                r.forEach((row) -> {
+                                    JSONObject rowObject = new JSONObject();
+                                    for(int i = 0; i < row.length; i++)
+                                    {
+                                        rowObject.put(columns[i], row[i]);
+                                    }
+                                    workingData.put(rowObject);
+                                });
+                            }
+                        } else {
+                            File inFile = new File(filename);
+                            String data = (new String(Files.readAllBytes(Paths.get(inFile.toURI())), StandardCharsets.UTF_8));
+                            readJSONData(data).forEach((o) -> {
+                                workingData.put(o);
+                            });
+                        }
                     } catch (Exception rfe) {
                         logIt("File Error: " + filename);
                         if (JSONRoller.verbose)
@@ -142,7 +170,7 @@ public class JSONRoller
             }
 
             // Here are all our pivoted outputs
-            if (cmd.hasOption("c") || cmd.hasOption("t") || cmd.hasOption("m"))
+            if (cmd.hasOption("c") || cmd.hasOption("t") || cmd.hasOption("m") || cmd.hasOption("j"))
             {
                 JSONArray pivotedData = workingData;
                 if (workingData.length() == 1)
@@ -167,6 +195,23 @@ public class JSONRoller
                         }
                     }
                 }
+
+                if (cmd.hasOption("j"))
+                {
+                    String optionalArg = cmd.getOptionValue("j");
+                    if (optionalArg != null)
+                    {
+                        File jsonOutputFile = new File(optionalArg);
+                        try (PrintWriter pw = new PrintWriter(jsonOutputFile)) {
+                            OutputData.writeJSON(pw, csvData);
+                        }
+                    } else {
+                        try (PrintWriter pw = new PrintWriter(System.out)) {
+                            OutputData.writeJSON(pw, csvData);
+                        }
+                    }
+                }
+
                 if (cmd.hasOption("t"))
                 {
                     String optionalArg = cmd.getOptionValue("t");
@@ -264,7 +309,7 @@ public class JSONRoller
     public static void showHelp(Options options)
     {
         HelpFormatter formatter = new HelpFormatter();
-        formatter.printHelp( "json-roller", "JSON Roller: A tool for manipulating JSON and flattening complex structures into a simple table" + System.lineSeparator() + "Project Page - https://openstatic.org/projects/json-roller/", options, "" );
+        formatter.printHelp( "json-roller", "JSON Roller: A tool for manipulating JSON and flattening complex structures into a simple table, or converting csv data into JSON" + System.lineSeparator() + "Project Page - https://openstatic.org/projects/json-roller/", options, "" );
         System.exit(0);
     }
     
