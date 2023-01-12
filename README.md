@@ -41,32 +41,43 @@ Note: when inputing multiple files they are concatinated first and treated as ab
 ### How do i use it? ###
 ```bash
 usage: json-roller
-JSON Roller: A tool for manipulating JSON and flattening complex
-structures into a simple table
+JSON Roller v1.2: A tool for manipulating JSON and flattening complex
+structures into a simple table, or converting csv data into JSON
 Project Page - https://openstatic.org/projects/json-roller/
- -?,--help                        Shows help
- -c,--csv <filename.csv>          Output Table CSV file (exclude filename
-                                  for STDOUT)
- -d,--dissect                     Dissect JSON data into each nested key
-                                  value pair (STDOUT)
- -e,--merge <spaces>              Merge all input objects into a single
-                                  object (STDOUT) optional numerical
-                                  argument to format the data using spaces
- -i,--input <filename>            Input file .json only use commas for
-                                  multiple files
- -k,--keys <key1,key2>            Comma seperated list of keys for nested
-                                  structures. Used to replace
-                                  layer0key,layer1key or provide keys for
-                                  nesting
- -m,--md <filename.md>            Output Markdown Table file (exclude
-                                  filename for STDOUT)
- -p,--properties <filename.ini>   Dissect JSON data into properties for
-                                  each nested key value pair (exclude
-                                  filename for STDOUT)
- -t,--tsv <filename.tsv>          Output Table TSV file (exclude filename
-                                  for STDOUT)
- -u,--url <arg>                   URL to read json from
- -v,--verbose                     Be Verbose
+ -?,--help                                  Shows help
+ -c,--csv <filename.csv>                    Output Table CSV file (exclude
+                                            filename for STDOUT)
+ -d,--dissect                               Dissect JSON data into each
+                                            nested key value pair (STDOUT)
+ -e,--merge <spaces>                        Merge all input objects into a
+                                            single object (STDOUT)
+                                            optional numerical argument to
+                                            format the data using spaces
+ -f,--filter <column=value,column!=value>   Comma seperated list of
+                                            filters (= != >= <= < >)
+                                            output data will be limited by
+                                            filters
+ -h,--html <filename.html>                  Output HTML file (exclude
+                                            filename for STDOUT)
+ -i,--input <filename>                      Input file .json or .csv only
+                                            use commas for multiple files
+ -j,--json <filename.json>                  Output Table as JSON Array
+                                            file (exclude filename for
+                                            STDOUT)
+ -k,--keys <key1,key2>                      Comma seperated list of keys
+                                            for nested structures. Used to
+                                            replace layer0key,layer1key or
+                                            provide keys for nesting
+ -m,--md <filename.md>                      Output Markdown Table file
+                                            (exclude filename for STDOUT)
+ -p,--properties <filename.ini>             Dissect JSON data into
+                                            properties for each nested key
+                                            value pair (exclude filename
+                                            for STDOUT)
+ -t,--tsv <filename.tsv>                    Output Table TSV file (exclude
+                                            filename for STDOUT)
+ -u,--url <arg>                             URL to read json from
+ -v,--verbose                               Be Verbose
 ```
 
 ### Root Arrays ###
