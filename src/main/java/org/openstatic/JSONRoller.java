@@ -75,7 +75,7 @@ public class JSONRoller
         csvOption.setArgName("filename.csv");
         options.addOption(csvOption);
 
-        Option htmlOption = new Option("h", "html", true, "Output HTML file (exclude filename for STDOUT)");
+        Option htmlOption = new Option("h", "html", true, "Output Interactive HTML file (exclude filename for STDOUT)");
         htmlOption.setOptionalArg(true);
         htmlOption.setArgName("filename.html");
         options.addOption(htmlOption);
@@ -94,7 +94,7 @@ public class JSONRoller
         mdOption.setOptionalArg(true);
         mdOption.setArgName("filename.md");
         options.addOption(mdOption);
-
+        String tableName = "";
         try
         {
             
@@ -144,12 +144,14 @@ public class JSONRoller
                                     workingData.put(rowObject);
                                 });
                             }
+                            tableName = filenameWithoutExtension(filename);
                         } else {
                             File inFile = new File(filename);
                             String data = (new String(Files.readAllBytes(Paths.get(inFile.toURI())), StandardCharsets.UTF_8));
                             readJSONData(data).forEach((o) -> {
                                 workingData.put(o);
                             });
+                            tableName = filenameWithoutExtension(filename);
                         }
                     } catch (Exception rfe) {
                         logIt("File Error: " + filename);
@@ -216,12 +218,13 @@ public class JSONRoller
                     if (optionalArg != null)
                     {
                         File htmlOutputFile = new File(optionalArg);
+                        tableName = filenameWithoutExtension(optionalArg);
                         try (PrintWriter pw = new PrintWriter(htmlOutputFile)) {
-                            OutputData.writeHTML(pw, csvData);
+                            OutputData.writeHTML(tableName, pw, csvData);
                         }
                     } else {
                         try (PrintWriter pw = new PrintWriter(System.out)) {
-                            OutputData.writeHTML(pw, csvData);
+                            OutputData.writeHTML(tableName, pw, csvData);
                         }
                     }
                 }
@@ -334,6 +337,33 @@ public class JSONRoller
                 e.printStackTrace(System.err);
             showHelp(options);
         }
+    }
+
+    public static String filenameExtension(String filename)
+    {
+        String extension = "";
+        int i = filename.lastIndexOf('.');
+        if (i > 0)
+        {
+            extension = filename.substring(i+1);
+        }
+        return extension;
+    }
+
+    public static String filenameWithoutExtension(String filename)
+    {
+        String rv = filename;
+        int i = rv.lastIndexOf('.');
+        if (i > 0)
+        {
+            rv = rv.substring(0, i);
+        }
+        int x = rv.lastIndexOf(File.separatorChar);
+        if (x > 0)
+        {
+            rv = rv.substring(x+1);
+        }
+        return rv;
     }
 
     public static void showHelp(Options options)
