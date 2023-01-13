@@ -37,11 +37,15 @@ public class OutputData
         pw.println("""
             <html>
             <head>
-                <script type="text/javascript">
+            <script type="text/javascript">
                 var upTriangle = String.fromCharCode(9650);
                 var downTriangle = String.fromCharCode(9660);
                 var imagesVisible = false;
-                
+                var columnsTotal = 0;
+                var rowsTotal = 0;
+                var rowsVisible = 0;
+                var columns = [];
+
                 function sortTable(table, col, reverse)
                 {
                     var headerElements = table.tHead.children[0].children;
@@ -71,19 +75,172 @@ public class OutputData
                     });
                     for(i = 0; i < tr.length; ++i) tb.appendChild(tr[i]); // append each row in order
                 }
-            
+
+                function applyFilters()
+                {
+                    rowsVisible = 0;
+                    var table = document.getElementById('data');
+                    var tb = table.tBodies[0], // use `<tbody>` to ignore `<thead>` and `<tfoot>` rows
+                    tr = Array.prototype.slice.call(tb.rows, 0);
+                    for(row of tr)
+                    {
+                        var meetsFilters = true;
+                        for(i = 0; i < columnsTotal; i++)
+                        {
+                            var selectEl = document.getElementById('filter' + i);
+                            var filterValue = selectEl.value;
+                            if (filterValue != '')
+                            {
+                                var rowColVal = row.cells[i].textContent.trim();
+                                if (rowColVal != filterValue)
+                                    meetsFilters = false;
+                            }
+                        }
+                        if (meetsFilters)
+                        {
+                            row.style.display = 'table-row';
+                            rowsVisible++;
+                        } else {
+                            row.style.display = 'none';
+                        }
+                    }
+                    updateRowInfo();
+                }
+
+                function updateRowInfo()
+                {
+                    if (rowsVisible == rowsTotal)
+                        document.getElementById('rowInfo').innerHTML = '(' + rowsTotal.toLocaleString() + ' rows)'; 
+                    else
+                       document.getElementById('rowInfo').innerHTML = '(' + rowsVisible.toLocaleString() + ' / ' + rowsTotal.toLocaleString() + ' rows)'; 
+                }
+
+                function isNumeric(n) {
+                return !isNaN(parseFloat(n)) && isFinite(n);
+                }
+
+                function valuesForColumn(table, col)
+                {
+                    var tb = table.tBodies[0], // use `<tbody>` to ignore `<thead>` and `<tfoot>` rows
+                        tr = Array.prototype.slice.call(tb.rows, 0), // put rows into array
+                        i;
+                    var ra = [];
+                    for(row of tr)
+                    {
+                        ra.push(row.cells[col].textContent.trim());
+                    }
+                    return ra;
+                }
+                
+                function rowElementValues(row)
+                {
+                    var ra = [];
+                    for(x of row.cells)
+                    {
+                        var colValue = x.textContent.trim();
+                        ra.push(colValue);
+                    }
+                    return ra;
+                }
+                
+                function csvEscape(ary)
+                {
+                    var ra = [];
+                    for(x of ary)
+                    {
+                        if (!isNumeric(x))
+                        {
+                            x = '"' + x + '"';
+                        }
+                        ra.push(x);
+                    }
+                    return ra;
+                }
+                
+                function generateCSV()
+                {
+                    var table = document.getElementById('data');
+                    var tb = table.tBodies[0],
+                        tr = Array.prototype.slice.call(tb.rows, 0),
+                        th = table.tHead;
+                    var myCSV = csvEscape(columns).join(',') + '\\n';
+                    for(row of tr)
+                    {
+                        if (row.style.display != 'none')
+                            myCSV += (csvEscape(rowElementValues(row)).join(',')) + '\\n';
+                    }
+                    return myCSV;
+                }
+                
+                function exportCSV()
+                {
+                    var myCSV = generateCSV();
+                    var link = document.createElement('a');
+                    var uri = 'data:text/csv;charset=utf-8,' + escape(myCSV);
+                    link.href = uri;
+                    link.download = 'data.csv';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                }
+
+                function uniqueArray(ary)
+                {
+                    return [...new Set(ary)];
+                }
+
+                function createOptions(selectElement, ary)
+                {
+                    var newOption = document.createElement('option');
+                    newOption.value = "";
+                    newOption.innerHTML = "";
+                    selectElement.appendChild(newOption);
+                    for(x of ary)
+                    {
+                        var newOption = document.createElement('option');
+                        newOption.value = x;
+                        newOption.innerHTML = x;
+                        selectElement.appendChild(newOption);
+                    }
+                }
+
                 function makeSortable(table)
                 {
+                    rowsTotal = table.tBodies[0].rows.length;
+                    rowsVisible = rowsTotal;
+                    updateRowInfo();
                     var th = table.tHead, i;
                     th && (th = th.rows[0]) && (th = th.cells);
                     if (th) i = th.length;
                     else return; // if no `<thead>` then do nothing
+                    columnsTotal = i;
+                    var autoFilterRow = document.createElement('tr');
+                    var j = 0;
+                    for(e of th)
+                    {
+                        columns.push(e.textContent);
+                        var newTh = document.createElement('td');
+                        newTh.style.padding = '0px 0px 0px 0px';
+                        var selectEl = document.createElement('select');
+                        selectEl.style.width = '100%';
+                        selectEl.id = 'filter'+j;
+                        createOptions(selectEl, uniqueArray(valuesForColumn(table, j)));
+                        let fj = j, ftable = table, fselectEl = selectEl;
+                        selectEl.onchange = function() {
+                            applyFilters();
+                        };
+                        newTh.appendChild(selectEl);
+                        autoFilterRow.appendChild(newTh);
+                        j++;
+                    }
+                    table.tHead.appendChild(autoFilterRow);
                     while (--i >= 0) (function (i) {
                         var dir = 1;
                         th[i].addEventListener('click', function () {sortTable(table, i, (dir = 1 - dir))});
                     }(i));
+                    table.style.display = 'table';
                 }
-            
+
                 function makeAllSortable()
                 {
                     var t = document.body.getElementsByTagName('table'), i = t.length;
@@ -92,6 +249,8 @@ public class OutputData
                     var imgDivs = document.body.getElementsByClassName('imgDiv'), imgDivsCount = imgDivs.length;
                     if (imgDivsCount > 0)
                         document.getElementById('showImageButton').style.display = 'inline-block';
+                    document.getElementById('exportCsvButton').style.display = 'inline-block';
+                    document.getElementById('loadingMSG').style.display = 'none';
                 }
 
                 function toggleImages()
@@ -115,66 +274,66 @@ public class OutputData
                         document.getElementById('showImageButton').innerHTML = "Show Images";
                     }
                 }
-            
+
                 </script>
                 <style>
-                table
-                {
-                    font-family: Arial, Helvetica, sans-serif;
-                    border-collapse: collapse;
-                    width: 100%;
-                }
+                    table
+                    {
+                        font-family: Arial, Helvetica, sans-serif;
+                        border-collapse: collapse;
+                        width: 100%;
+                    }
 
-                #data td, #data th
-                {
-                    border: 1px solid #ddd;
-                    padding: 8px;
-                }
+                    #data td, #data th
+                    {
+                        border: 1px solid #ddd;
+                        padding: 8px;
+                    }
 
-                #data tr:nth-child(even){background-color: #f2f2f2;}
+                    #data tr:nth-child(even){background-color: #f2f2f2;}
 
-                #data tr:hover {background-color: #ddd;}
+                    #data tr:hover {background-color: #ddd;}
 
-                #data th {
-                    padding-top: 12px;
-                    padding-bottom: 12px;
-                    text-align: left;
-                    cursor: pointer;
-                    background-color: #808080;
-                    color: white;
-                }
+                    #data th {
+                        padding-top: 12px;
+                        padding-bottom: 12px;
+                        text-align: left;
+                        cursor: pointer;
+                        background-color: #808080;
+                        color: white;
+                    }
 
-                img {
-                    max-height: 128px;
-                }
-                
-                button {
-                    height: 32px;
-                    vertical-align: text-bottom;
-                }
+                    img {
+                        max-height: 128px;
+                    }
+                    
+                    button {
+                        height: 32px;
+                        vertical-align: text-bottom;
+                    }
 
-                .imgDiv {
-                    display: none;
-                }
+                    .imgDiv {
+                        display: none;
+                    }
 
-                .headerDiv {
-                    font-size: 32px;
-                    border: 1px black solid;
-                    padding: 4px 4px 4px 4px;
-                    width: 99%;
-                    margin-left: 4px;
-                    margin-right: 4px;
-                    position: fixed;
-                    top: 6px;
-                    left: 0px;
-                    background-color: white;
-                }
+                    .headerDiv {
+                        font-size: 32px;
+                        border: 1px black solid;
+                        padding: 4px 4px 4px 4px;
+                        width: 99%;
+                        margin-left: 4px;
+                        margin-right: 4px;
+                        position: fixed;
+                        top: 6px;
+                        left: 0px;
+                        background-color: white;
+                    }
                 </style>
             </head>
             <body onload="makeAllSortable()">
                 """);
-        pw.println("<div class=\"headerDiv\">" + tableName + " <button style=\"display: none;\" id=\"showImageButton\" onclick=\"toggleImages()\">Show Images</button><a href=\"https://openstatic.org/projects/json-roller/\" taget=\"_blank\" style=\"float: right; font-size: 28px; text-decoration: none;\">json-roller</a></div>");
-        pw.println("<table id=\"data\" style=\"margin-top: 64px;\">");
+        pw.println("<div class=\"headerDiv\"><span id=\"loadingMSG\">Loading... </span>" + tableName + " <span id=\"rowInfo\" style=\"font-size: 18px;\"></span> <button id=\"exportCsvButton\" style=\"display: none;\" onclick=\"exportCSV()\">Export (Filtered and Sorted) CSV</button><button style=\"display: none;\" id=\"showImageButton\" onclick=\"toggleImages()\">Show Images</button><a href=\"https://openstatic.org/projects/json-roller/\" target=\"_blank\" style=\"float: right; font-size: 18px; text-decoration: none;\">Generated by json-roller</a></div>");
+        pw.println("<table id=\"data\" style=\"margin-top: 64px; display: none;\">");
         pw.println("<thead><tr>");
         String[] columnHeaders = dataLines.get(0);
         pw.println(Stream.of(columnHeaders).map(OutputData::makeColumnHeader).collect(Collectors.joining()));
