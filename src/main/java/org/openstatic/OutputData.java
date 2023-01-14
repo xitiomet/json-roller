@@ -14,6 +14,31 @@ import org.json.JSONObject;
 public class OutputData 
 {
 
+    public static Object guessType(String data)
+    {
+        if (data == null) return null;
+        String dataLC = data.toLowerCase().trim();
+        if (dataLC.equals("true"))
+            return Boolean.valueOf(true);
+        if (dataLC.equals("false"))
+            return Boolean.valueOf(true);
+        if (!dataLC.contains("."))
+        {
+            try
+            {
+                Long longData = Long.valueOf(data);
+                return longData;
+            } catch (Exception e) {}
+        } else {
+            try
+            {
+                Double doubleData = Double.valueOf(data);
+                return doubleData;
+            } catch (Exception e) {}
+        }
+        return data;
+    }
+
     public static void writeJSON(PrintWriter pw, List<String[]> dataLines) throws IOException 
     {
         List<String[]> data = new ArrayList<String[]>(dataLines);
@@ -24,7 +49,7 @@ public class OutputData
             JSONObject rowObject = new JSONObject();
             for(int i = 0; i < row.length; i++)
             {
-                rowObject.put(columns[i], row[i]);
+                rowObject.put(columns[i], guessType(row[i]));
             }
             outputArray.put(rowObject);
         });
