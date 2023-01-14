@@ -224,7 +224,9 @@ public class OutputData
                         var selectEl = document.createElement('select');
                         selectEl.style.width = '100%';
                         selectEl.id = 'filter'+j;
-                        createOptions(selectEl, uniqueArray(valuesForColumn(table, j)));
+                        createOptions(selectEl, uniqueArray(valuesForColumn(table, j)).sort(function (a, b) { // sort rows
+                            return (a.localeCompare(b, 'en', {numeric: true}));
+                        }));
                         let fj = j, ftable = table, fselectEl = selectEl;
                         selectEl.onchange = function() {
                             applyFilters();

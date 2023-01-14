@@ -122,6 +122,9 @@
             <artifactId>jdeb</artifactId>
             <groupId>org.vafer</groupId>
             <version>1.8</version>
+            <configuration>
+              <skip>false</skip>
+            </configuration>
             <executions>
                 <!-- build native image debian package -->
                 <execution>
@@ -154,6 +157,83 @@
                 </execution>
             </executions>
        </plugin>
+       <plugin>
+            <groupId>com.akathist.maven.plugins.launch4j</groupId>
+            <artifactId>launch4j-maven-plugin</artifactId>
+            <version>2.0.1</version>
+            <executions>
+                <execution>
+                    <id>l4j-gui</id>
+                    <phase>package</phase>
+                    <goals>
+                        <goal>launch4j</goal>
+                    </goals>
+                    <configuration>
+                        <headerType>console</headerType>
+                        <outfile>target/json-roller.exe</outfile>
+                        <jar>target/${project.artifactId}-${project.version}.jar</jar>
+                        <!-- if <dontWrapJar>true</dontWrapJar> change to this conf <jar>${project.artifactId}-${project.version}.jar</jar> -->
+                        <dontWrapJar>false</dontWrapJar>
+                        <errTitle>Error in launch4j plugin</errTitle>
+                        <classPath>
+                            <mainClass>${mainClass}</mainClass>
+                        </classPath>
+                        <icon>src/main/resources/jsonroller.ico</icon>
+                        <jre>
+                            <path>%JAVA_HOME%;%PATH%;jre</path>
+                            <minVersion>1.8.0</minVersion>
+                            <initialHeapSize>512</initialHeapSize>
+                            <maxHeapSize>1024</maxHeapSize>
+                            <opts>
+                              <opt>-Djava.awt.headless=true</opt>
+                            </opts>
+                        </jre>
+                        <versionInfo>
+                            <fileVersion>1.0.0.0</fileVersion>
+                            <txtFileVersion>1.0.0.0</txtFileVersion>
+                            <fileDescription>json-roller</fileDescription>
+                            <copyright>Copyright (c) 2019</copyright>
+                            <companyName>openstatic.org</companyName>
+                            <productVersion>1.0.0.0</productVersion>
+                            <txtProductVersion>${project.version}</txtProductVersion>
+                            <productName>JSONRoller</productName>
+                            <internalName>JSONRoller</internalName>
+                            <originalFilename>json-roller.exe</originalFilename>
+                        </versionInfo>
+                    </configuration>
+                </execution>
+            </executions>
+        </plugin>
+        <plugin>
+            <groupId>org.digitalmediaserver</groupId>
+            <artifactId>nsis-maven-plugin</artifactId>
+            <version>1.0.2</version>
+            <configuration>
+                <makensisExecutable>C:\Program Files (x86)\NSIS\makensis.exe</makensisExecutable>
+                <makensisExecutableLinux>/usr/bin/makensis</makensisExecutableLinux>
+                <makensisExecutableMacOS></makensisExecutableMacOS>
+                <compression>lzma</compression>
+                <compressionIsFinal>true</compressionIsFinal>
+                <compressionDictSize>64</compressionDictSize>
+                <defines>
+                    <PROJECT_NAME_SHORT>json-roller</PROJECT_NAME_SHORT>
+                    <PROJECT_NAME_CAMEL>${project.name.camel}</PROJECT_NAME_CAMEL>
+                </defines>
+            </configuration>
+            <executions>
+                <execution>
+                    <id>build-windows-installer</id>
+                    <configuration>
+                        <scriptFile>${basedir}/src/nsis/json-roller.nsi</scriptFile>
+                        <outputFile>json-roller-setup.exe</outputFile>
+                    </configuration>
+                    <goals>
+                        <goal>generate-headerfile</goal>
+                        <goal>make</goal>
+                    </goals>
+                </execution>
+            </executions>
+        </plugin>
         <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-javadoc-plugin</artifactId>
