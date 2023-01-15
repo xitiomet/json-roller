@@ -190,12 +190,19 @@ public class JSONRoller
                     logIt("Singular Object Detected: performing table pivot");
                     pivotedData = new JSONArray(pivotJSONObject(new JSONObject(), 0, workingData.getJSONObject(0)));
                 }
+                int recordCount = pivotedData.length();
                 if (cmd.hasOption("f"))
                 {
-                    pivotedData = filterData(pivotedData, cmd.getOptionValue("f"));
+                    String filters = cmd.getOptionValue("f");
+                    pivotedData = filterData(pivotedData, filters);
+                    int filteredRecordCount = pivotedData.length();
+                    logIt("Records Generated: " + String.valueOf(recordCount));
+                    logIt("Records Filtered (" + filters + "): " + String.valueOf(recordCount - filteredRecordCount));
+                    logIt("Records Output: " + String.valueOf(filteredRecordCount));
+                } else {
+                    logIt("Records Output: " + String.valueOf(recordCount));
                 }
                 List<String[]> csvData = JSONArrayFlatten(pivotedData);
-
                 if (cmd.hasOption("c"))
                 {
                     String optionalArg = cmd.getOptionValue("c");
@@ -378,8 +385,6 @@ public class JSONRoller
         String[] filters = filtersString.split(",");
         if (filters.length > 0)
         {
-            if (JSONRoller.verbose)
-                System.err.println("Filters: " + filtersString);
             JSONArray ra = new JSONArray();
             for (int s = 0; s < source.length(); s++)
             {
