@@ -8,6 +8,5 @@ config.json
 .DS_Store
 .vscode/
 *.csv
-*.json
 *.tsv
 jre/
