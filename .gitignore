@@ -10,3 +10,4 @@ config.json
 *.csv
 *.json
 *.tsv
+jre/
