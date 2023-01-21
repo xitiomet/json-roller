@@ -2,6 +2,7 @@ package org.openstatic;
 
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
@@ -16,6 +17,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.net.URL;
 import java.net.URLDecoder;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -24,9 +26,13 @@ import java.io.InputStream;
 import java.io.PrintWriter;
 
 import org.apache.commons.cli.*;
+import org.apache.commons.lang3.CharSet;
 import org.json.*;
 
+import com.opencsv.CSVParserBuilder;
 import com.opencsv.CSVReader;
+import com.opencsv.CSVReaderBuilder;
+import com.opencsv.RFC4180ParserBuilder;
 
 public class JSONRoller
 {
@@ -34,6 +40,8 @@ public class JSONRoller
     private static boolean verbose = false;
     private static List<String> keyLayers = new ArrayList<String>();
     private static List<String> columnOrder = new ArrayList<String>();
+    private static long processingStartAt;
+    private static long processingEndAt;
 
     public static void main(String[] args) throws IOException 
     {
@@ -115,7 +123,7 @@ public class JSONRoller
                 JSONRoller.verbose = true;
             
             JSONArray workingData = new JSONArray();
-
+            JSONRoller.processingStartAt = System.currentTimeMillis();
             if (cmd.hasOption("i"))
             {
                 List<String> filenames = Arrays.asList(cmd.getOptionValue("i").split(","));
@@ -128,23 +136,55 @@ public class JSONRoller
                         logIt("Reading File: " + filename);
                         if (filename.toLowerCase().endsWith(".csv"))
                         {
-                            try (CSVReader reader = new CSVReader(new FileReader(filename))) 
+                            try 
                             {
-                                List<String[]> r = reader.readAll();
+                                int rowNum = 0;
+                                List<String[]> r = new LinkedList<String[]>();
+                                FileReader fileReader = new FileReader(filename, Charset.forName("UTF-8"));
+                                CSVReader reader = new CSVReaderBuilder(fileReader)
+                                                        .withCSVParser(new RFC4180ParserBuilder().withQuoteChar('"').withSeparator(',').build())
+                                                        .withMultilineLimit(100)
+                                                        .withKeepCarriageReturn(false)
+                                                        .build();
+                                String[] line = reader.readNext();
+                                boolean hasNext = true;
+                                while (hasNext)
+                                {
+                                    r.add(line);
+                                    rowNum++;
+                                    try
+                                    {
+                                        line = reader.readNext();
+                                        if (line == null)
+                                            hasNext = false;
+                                    } catch (Exception csvEx) {
+                                        logIt("Row Error(" + String.valueOf(rowNum) + "): " + csvEx.getLocalizedMessage());
+                                    }
+                                }
+                                reader.close();
                                 String[] columns = r.get(0);
                                 for(int i = 0; i < columns.length; i++)
                                     registerColumn(columns[i]);
                                 r.remove(0);
                                 r.forEach((row) -> {
-                                    JSONObject rowObject = new JSONObject();
-                                    for(int i = 0; i < row.length; i++)
+                                    try
                                     {
-                                        rowObject.put(columns[i], row[i]);
+                                        JSONObject rowObject = new JSONObject();
+                                        for(int i = 0; i < row.length; i++)
+                                        {
+                                            rowObject.put(columns[i], row[i]);
+                                        }
+                                        workingData.put(rowObject);
+                                    } catch (Exception insertFailure) {
+                                        logIt("Bad Row (" + insertFailure.getLocalizedMessage() + "): " + new JSONArray(row).toString());
                                     }
-                                    workingData.put(rowObject);
                                 });
+                                tableName = filenameWithoutExtension(filename);
+                                logIt("Finished reading CSV: " + filename  + " " + String.valueOf(rowNum) + " rows");
+                            } catch (Exception e) {
+                                logIt("Error reading: " + filename);
+                                e.printStackTrace(System.err);
                             }
-                            tableName = filenameWithoutExtension(filename);
                         } else {
                             File inFile = new File(filename);
                             String data = (new String(Files.readAllBytes(Paths.get(inFile.toURI())), StandardCharsets.UTF_8));
@@ -152,6 +192,7 @@ public class JSONRoller
                                 workingData.put(o);
                             });
                             tableName = filenameWithoutExtension(filename);
+                            logIt("Finished reading JSON: " + filename);
                         }
                     } catch (Exception rfe) {
                         logIt("File Error: " + filename);
@@ -190,7 +231,9 @@ public class JSONRoller
                     logIt("Singular Object Detected: performing table pivot");
                     pivotedData = new JSONArray(pivotJSONObject(new JSONObject(), 0, workingData.getJSONObject(0)));
                 }
+                
                 int recordCount = pivotedData.length();
+
                 if (cmd.hasOption("f"))
                 {
                     String filters = cmd.getOptionValue("f");
@@ -203,6 +246,9 @@ public class JSONRoller
                     logIt("Records Output: " + String.valueOf(recordCount));
                 }
                 List<String[]> csvData = JSONArrayFlatten(pivotedData);
+                JSONRoller.processingEndAt = System.currentTimeMillis();
+                long processingDuration = JSONRoller.processingEndAt - JSONRoller.processingStartAt;
+                logIt("Processing Time: " + String.valueOf(processingDuration) + "ms");
                 if (cmd.hasOption("c"))
                 {
                     String optionalArg = cmd.getOptionValue("c");

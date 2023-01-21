@@ -115,6 +115,7 @@
                     --no-fallback
                     --enable-https
                     --enable-http
+                    -Dfile.encoding=UTF-8
                 </buildArgs>
             </configuration>
        </plugin>
@@ -186,6 +187,7 @@
                             <maxHeapSize>1024</maxHeapSize>
                             <opts>
                               <opt>-Djava.awt.headless=true</opt>
+                              <opt>-Dfile.encoding=UTF-8</opt>
                             </opts>
                         </jre>
                         <versionInfo>
