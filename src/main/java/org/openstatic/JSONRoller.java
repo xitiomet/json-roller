@@ -78,7 +78,7 @@ public class JSONRoller
         filterOption.setArgName("column=value,column!=value");
         options.addOption(filterOption);
 
-        Option csvOption = new Option("c", "csv", true, "Output Table CSV file (exclude filename for STDOUT)");
+        Option csvOption = new Option("c", "csv", true, "Output Table CSV file (exclude filename for STDOUT, can also include a comma and a limit to create csv batches)");
         csvOption.setOptionalArg(true);
         csvOption.setArgName("filename.csv");
         options.addOption(csvOption);
@@ -254,9 +254,32 @@ public class JSONRoller
                     String optionalArg = cmd.getOptionValue("c");
                     if (optionalArg != null)
                     {
-                        File csvOutputFile = new File(optionalArg);
-                        try (PrintWriter pw = new PrintWriter(csvOutputFile)) {
-                            OutputData.writeCSV(pw, csvData);
+                        String filename = optionalArg;
+                        if (optionalArg.contains(","))
+                        {
+                            try
+                            {
+                                StringTokenizer st = new StringTokenizer(optionalArg, ",");
+                                filename = st.nextToken();
+                                int limit = Integer.valueOf(st.nextToken()).intValue();
+                                List<List<String[]>> chunks = chunkCSV(csvData, limit);
+                                int piece = 1;
+                                for (Iterator<List<String[]>> chunkIterator = chunks.iterator(); chunkIterator.hasNext(); piece++)
+                                {
+                                    List<String[]> chunk = chunkIterator.next();
+                                    File csvOutputFile = new File(String.format("%02d",piece) + "_" + filename);
+                                    try (PrintWriter pw = new PrintWriter(csvOutputFile)) {
+                                        OutputData.writeCSV(pw, chunk);
+                                    }
+                                }
+                            } catch (Exception spExc) {
+                                logIt("Split CSV error, check your chunk size");
+                            }
+                        } else {
+                            File csvOutputFile = new File(filename);
+                            try (PrintWriter pw = new PrintWriter(csvOutputFile)) {
+                                OutputData.writeCSV(pw, csvData);
+                            }
                         }
                     } else {
                         try (PrintWriter pw = new PrintWriter(System.out)) {
@@ -390,6 +413,26 @@ public class JSONRoller
                 e.printStackTrace(System.err);
             showHelp(options);
         }
+    }
+
+    public static List<List<String[]>> chunkCSV(List<String[]> data, int size)
+    {
+        ArrayList<List<String[]>> returnChunks = new ArrayList<List<String[]>>();
+        int startSpot = 1;
+        int remainingRecords = data.size() - 1;
+        String[] header = data.get(0);
+        int chunks = (data.size() / size) + 1;
+        for (int i = 0; i < chunks; i++)
+        {
+            List<String[]> sublist = new LinkedList<String[]>();
+            int to = startSpot + ((size < remainingRecords) ? size : remainingRecords);
+            sublist.add(header);
+            sublist.addAll(data.subList(startSpot, to));
+            startSpot += sublist.size() - 1;
+            remainingRecords -= sublist.size() - 1;
+            returnChunks.add(sublist);
+        }
+        return returnChunks;
     }
 
     public static String filenameExtension(String filename)
