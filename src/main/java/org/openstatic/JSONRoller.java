@@ -74,7 +74,7 @@ public class JSONRoller
         keyOption.setArgName("key1,key2");
         options.addOption(keyOption);
 
-        Option filterOption = new Option("f", "filter", true, "Comma seperated list of filters (= != >= <= < >) output data will be limited by filters");
+        Option filterOption = new Option("f", "filter", true, "Comma seperated list of filters (Operators are = != >= <= < >) output data will be limited by filters");
         filterOption.setArgName("column=value,column!=value");
         options.addOption(filterOption);
 

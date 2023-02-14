@@ -181,10 +181,10 @@
                         </classPath>
                         <icon>src/main/resources/jsonroller.ico</icon>
                         <jre>
-                            <path>%JAVA_HOME%;%PATH%;jre</path>
-                            <minVersion>1.8.0</minVersion>
+                            <path>./jre</path>
+                            <minVersion>11</minVersion>
                             <initialHeapSize>512</initialHeapSize>
-                            <maxHeapSize>1024</maxHeapSize>
+                            <maxHeapSize>2048</maxHeapSize>
                             <opts>
                               <opt>-Djava.awt.headless=true</opt>
                               <opt>-Dfile.encoding=UTF-8</opt>
