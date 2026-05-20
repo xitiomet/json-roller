@@ -23,7 +23,9 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.io.BufferedWriter;
 
 import org.apache.commons.cli.*;
 import org.apache.commons.lang3.CharSet;
@@ -268,7 +270,8 @@ public class JSONRoller
                                 {
                                     List<String[]> chunk = chunkIterator.next();
                                     File csvOutputFile = new File(String.format("%02d",piece) + "_" + filename);
-                                    try (PrintWriter pw = new PrintWriter(csvOutputFile)) {
+                                    try (PrintWriter pw = new PrintWriter(new BufferedWriter(new OutputStreamWriter(new java.io.FileOutputStream(csvOutputFile), StandardCharsets.UTF_8)))) {
+                                        pw.write('\uFEFF');
                                         OutputData.writeCSV(pw, chunk);
                                     }
                                 }
@@ -277,12 +280,13 @@ public class JSONRoller
                             }
                         } else {
                             File csvOutputFile = new File(filename);
-                            try (PrintWriter pw = new PrintWriter(csvOutputFile)) {
+                            try (PrintWriter pw = new PrintWriter(new BufferedWriter(new OutputStreamWriter(new java.io.FileOutputStream(csvOutputFile), StandardCharsets.UTF_8)))) {
+                                pw.write('\uFEFF');
                                 OutputData.writeCSV(pw, csvData);
                             }
                         }
                     } else {
-                        try (PrintWriter pw = new PrintWriter(System.out)) {
+                        try (PrintWriter pw = new PrintWriter(new BufferedWriter(new OutputStreamWriter(System.out, StandardCharsets.UTF_8)))) {
                             OutputData.writeCSV(pw, csvData);
                         }
                     }
@@ -295,11 +299,11 @@ public class JSONRoller
                     {
                         File htmlOutputFile = new File(optionalArg);
                         tableName = filenameWithoutExtension(optionalArg);
-                        try (PrintWriter pw = new PrintWriter(htmlOutputFile)) {
+                        try (PrintWriter pw = new PrintWriter(new BufferedWriter(new OutputStreamWriter(new java.io.FileOutputStream(htmlOutputFile), StandardCharsets.UTF_8)))) {
                             OutputData.writeHTML(tableName, pw, csvData);
                         }
                     } else {
-                        try (PrintWriter pw = new PrintWriter(System.out)) {
+                        try (PrintWriter pw = new PrintWriter(new BufferedWriter(new OutputStreamWriter(System.out, StandardCharsets.UTF_8)))) {
                             OutputData.writeHTML(tableName, pw, csvData);
                         }
                     }
@@ -311,11 +315,11 @@ public class JSONRoller
                     if (optionalArg != null)
                     {
                         File jsonOutputFile = new File(optionalArg);
-                        try (PrintWriter pw = new PrintWriter(jsonOutputFile)) {
+                        try (PrintWriter pw = new PrintWriter(new BufferedWriter(new OutputStreamWriter(new java.io.FileOutputStream(jsonOutputFile), StandardCharsets.UTF_8)))) {
                             OutputData.writeJSON(pw, csvData);
                         }
                     } else {
-                        try (PrintWriter pw = new PrintWriter(System.out)) {
+                        try (PrintWriter pw = new PrintWriter(new BufferedWriter(new OutputStreamWriter(System.out, StandardCharsets.UTF_8)))) {
                             OutputData.writeJSON(pw, csvData);
                         }
                     }
@@ -327,11 +331,11 @@ public class JSONRoller
                     if (optionalArg != null)
                     {
                         File tsvOutputFile = new File(optionalArg);
-                        try (PrintWriter pw = new PrintWriter(tsvOutputFile)) {
+                        try (PrintWriter pw = new PrintWriter(new BufferedWriter(new OutputStreamWriter(new java.io.FileOutputStream(tsvOutputFile), StandardCharsets.UTF_8)))) {
                             OutputData.writeTSV(pw, csvData);
                         }
                     } else {
-                        try (PrintWriter pw = new PrintWriter(System.out)) {
+                        try (PrintWriter pw = new PrintWriter(new BufferedWriter(new OutputStreamWriter(System.out, StandardCharsets.UTF_8)))) {
                             OutputData.writeTSV(pw, csvData);
                         }
                     }
@@ -342,11 +346,11 @@ public class JSONRoller
                     if (optionalArg != null)
                     {
                         File mdOutputFile = new File(optionalArg);
-                        try (PrintWriter pw = new PrintWriter(mdOutputFile)) {
+                        try (PrintWriter pw = new PrintWriter(new BufferedWriter(new OutputStreamWriter(new java.io.FileOutputStream(mdOutputFile), StandardCharsets.UTF_8)))) {
                             OutputData.writeMarkdown(pw, csvData);
                         }
                     } else {
-                        try (PrintWriter pw = new PrintWriter(System.out)) {
+                        try (PrintWriter pw = new PrintWriter(new BufferedWriter(new OutputStreamWriter(System.out, StandardCharsets.UTF_8)))) {
                             OutputData.writeMarkdown(pw, csvData);
                         }
                     }
@@ -387,12 +391,12 @@ public class JSONRoller
             {
                 try
                 {
-                    PrintWriter pw = new PrintWriter(System.out);
+                    PrintWriter pw = new PrintWriter(new BufferedWriter(new OutputStreamWriter(System.out, StandardCharsets.UTF_8)));
                     String optionalArg = cmd.getOptionValue("p");
                     if (optionalArg != null)
                     {
                         File iniOutputFile = new File(optionalArg);
-                        pw = new PrintWriter(iniOutputFile);
+                        pw = new PrintWriter(new BufferedWriter(new OutputStreamWriter(new java.io.FileOutputStream(iniOutputFile), StandardCharsets.UTF_8)));
                     } 
                     if (workingData.length() == 1)
                     {
