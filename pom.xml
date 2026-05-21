@@ -13,6 +13,9 @@
     <maven.compiler.target>15</maven.compiler.target>
     <imageName>json-roller</imageName>
     <graalvm.version>21.2.0</graalvm.version>
+    <!-- OS-specific extra args appended to the native-image build.
+         Overridden by the os-activated profiles below. -->
+    <nativeImage.extraBuildArgs></nativeImage.extraBuildArgs>
   </properties>
   <repositories>
     <repository>
@@ -115,127 +118,12 @@
                     --no-fallback
                     --enable-https
                     --enable-http
+                    --enable-url-protocols=https,http
                     -Dfile.encoding=UTF-8
+                    ${nativeImage.extraBuildArgs}
                 </buildArgs>
             </configuration>
        </plugin>
-       <plugin>
-            <artifactId>jdeb</artifactId>
-            <groupId>org.vafer</groupId>
-            <version>1.8</version>
-            <configuration>
-              <skip>false</skip>
-            </configuration>
-            <executions>
-                <!-- build native image debian package -->
-                <execution>
-                    <id>native-debian-package</id>
-                    <phase>package</phase>
-                    <goals>
-                        <goal>jdeb</goal>
-                    </goals>
-                    <configuration>
-                        <verbose>true</verbose>
-                        <snapshotExpand>true</snapshotExpand>
-                        <!-- expand "SNAPSHOT" to what is in the "USER" env variable -->
-                        <snapshotEnv>USER</snapshotEnv>
-                        <controlDir>${basedir}/src/deb/control</controlDir>
-                        <deb>${project.build.directory}/${project.artifactId}-${project.version}-native.deb</deb>
-                        <dataSet>
-                            <data>
-                              <src>${project.build.directory}/${imageName}</src>
-                              <type>file</type>
-                              <mapper>
-                                <type>perm</type>
-                                <prefix>/usr/bin</prefix>
-                                <user>loader</user>
-                                <group>loader</group>
-                                <filemode>755</filemode>
-                              </mapper>
-                            </data>
-                        </dataSet>
-                    </configuration>
-                </execution>
-            </executions>
-       </plugin>
-       <plugin>
-            <groupId>com.akathist.maven.plugins.launch4j</groupId>
-            <artifactId>launch4j-maven-plugin</artifactId>
-            <version>2.0.1</version>
-            <executions>
-                <execution>
-                    <id>l4j-gui</id>
-                    <phase>package</phase>
-                    <goals>
-                        <goal>launch4j</goal>
-                    </goals>
-                    <configuration>
-                        <headerType>console</headerType>
-                        <outfile>target/json-roller-l4j.exe</outfile>
-                        <jar>target/${project.artifactId}-${project.version}.jar</jar>
-                        <!-- if <dontWrapJar>true</dontWrapJar> change to this conf <jar>${project.artifactId}-${project.version}.jar</jar> -->
-                        <dontWrapJar>false</dontWrapJar>
-                        <errTitle>Error in launch4j plugin</errTitle>
-                        <classPath>
-                            <mainClass>${mainClass}</mainClass>
-                        </classPath>
-                        <icon>src/main/resources/jsonroller.ico</icon>
-                        <jre>
-                            <path>./jre</path>
-                            <minVersion>11</minVersion>
-                            <initialHeapSize>512</initialHeapSize>
-                            <maxHeapSize>2048</maxHeapSize>
-                            <opts>
-                              <opt>-Djava.awt.headless=true</opt>
-                              <opt>-Dfile.encoding=UTF-8</opt>
-                            </opts>
-                        </jre>
-                        <versionInfo>
-                            <fileVersion>1.0.0.0</fileVersion>
-                            <txtFileVersion>1.0.0.0</txtFileVersion>
-                            <fileDescription>json-roller</fileDescription>
-                            <copyright>Copyright (c) 2019</copyright>
-                            <companyName>openstatic.org</companyName>
-                            <productVersion>1.0.0.0</productVersion>
-                            <txtProductVersion>${project.version}</txtProductVersion>
-                            <productName>JSONRoller</productName>
-                            <internalName>JSONRoller</internalName>
-                            <originalFilename>json-roller.exe</originalFilename>
-                        </versionInfo>
-                    </configuration>
-                </execution>
-            </executions>
-        </plugin>
-        <plugin>
-            <groupId>org.digitalmediaserver</groupId>
-            <artifactId>nsis-maven-plugin</artifactId>
-            <version>1.0.2</version>
-            <configuration>
-                <makensisExecutable>C:\Program Files (x86)\NSIS\makensis.exe</makensisExecutable>
-                <makensisExecutableLinux>/usr/bin/makensis</makensisExecutableLinux>
-                <makensisExecutableMacOS></makensisExecutableMacOS>
-                <compression>lzma</compression>
-                <compressionIsFinal>true</compressionIsFinal>
-                <compressionDictSize>64</compressionDictSize>
-                <defines>
-                    <PROJECT_NAME_SHORT>json-roller</PROJECT_NAME_SHORT>
-                    <PROJECT_NAME_CAMEL>${project.name.camel}</PROJECT_NAME_CAMEL>
-                </defines>
-            </configuration>
-            <executions>
-                <execution>
-                    <id>build-windows-installer</id>
-                    <configuration>
-                        <scriptFile>${basedir}/src/nsis/json-roller.nsi</scriptFile>
-                        <outputFile>json-roller-setup.exe</outputFile>
-                    </configuration>
-                    <goals>
-                        <goal>generate-headerfile</goal>
-                        <goal>make</goal>
-                    </goals>
-                </execution>
-            </executions>
-        </plugin>
         <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-javadoc-plugin</artifactId>
@@ -245,4 +133,139 @@
        </plugin>
     </plugins>
   </build>
+
+  <profiles>
+    <!--
+        Linux-only profile: builds a Debian package containing the native
+        image binary. jdeb runs fine cross-platform but the produced .deb
+        is only meaningful on Linux, so the execution is gated here.
+    -->
+    <profile>
+      <id>linux</id>
+      <activation>
+        <os>
+          <family>unix</family>
+          <name>linux</name>
+        </os>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>jdeb</artifactId>
+            <groupId>org.vafer</groupId>
+            <version>1.8</version>
+            <configuration>
+              <skip>false</skip>
+            </configuration>
+            <executions>
+              <!-- build native image debian package -->
+              <execution>
+                <id>native-debian-package</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>jdeb</goal>
+                </goals>
+                <configuration>
+                  <verbose>true</verbose>
+                  <snapshotExpand>true</snapshotExpand>
+                  <!-- expand "SNAPSHOT" to what is in the "USER" env variable -->
+                  <snapshotEnv>USER</snapshotEnv>
+                  <controlDir>${basedir}/src/deb/control</controlDir>
+                  <deb>${project.build.directory}/${project.artifactId}-${project.version}-native.deb</deb>
+                  <dataSet>
+                    <data>
+                      <src>${project.build.directory}/${imageName}</src>
+                      <type>file</type>
+                      <mapper>
+                        <type>perm</type>
+                        <prefix>/usr/bin</prefix>
+                        <user>loader</user>
+                        <group>loader</group>
+                        <filemode>755</filemode>
+                      </mapper>
+                    </data>
+                  </dataSet>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <!--
+        Windows-only profile: compiles src/win/json-roller.rc into a .res
+        file, links it into the native-image so the produced .exe carries
+        the application icon and version info, and finally packages the
+        native binary (plus any DLLs it depends on) into an NSIS installer.
+    -->
+    <profile>
+      <id>windows</id>
+      <activation>
+        <os>
+          <family>windows</family>
+        </os>
+      </activation>
+      <properties>
+        <!-- Link the compiled Win32 resource (icon + version info) into the native binary. -->
+        <nativeImage.extraBuildArgs>-H:NativeLinkerOption=${project.build.directory}\json-roller.res</nativeImage.extraBuildArgs>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <version>3.1.0</version>
+            <executions>
+              <execution>
+                <id>compile-win-resource</id>
+                <phase>prepare-package</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <executable>rc.exe</executable>
+                  <arguments>
+                    <argument>/nologo</argument>
+                    <argument>/fo</argument>
+                    <argument>${project.build.directory}\json-roller.res</argument>
+                    <argument>${basedir}\src\win\json-roller.rc</argument>
+                  </arguments>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.digitalmediaserver</groupId>
+            <artifactId>nsis-maven-plugin</artifactId>
+            <version>1.0.2</version>
+            <configuration>
+              <makensisExecutable>C:\Program Files (x86)\NSIS\makensis.exe</makensisExecutable>
+              <compression>lzma</compression>
+              <compressionIsFinal>true</compressionIsFinal>
+              <compressionDictSize>64</compressionDictSize>
+              <defines>
+                <PROJECT_NAME_SHORT>json-roller</PROJECT_NAME_SHORT>
+                <PROJECT_NAME_CAMEL>${project.name.camel}</PROJECT_NAME_CAMEL>
+              </defines>
+            </configuration>
+            <executions>
+              <execution>
+                <id>build-windows-installer</id>
+                <phase>package</phase>
+                <configuration>
+                  <scriptFile>${basedir}/src/nsis/json-roller.nsi</scriptFile>
+                  <outputFile>json-roller-setup.exe</outputFile>
+                </configuration>
+                <goals>
+                  <goal>generate-headerfile</goal>
+                  <goal>make</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>

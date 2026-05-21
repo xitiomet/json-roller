@@ -207,8 +207,13 @@ SectionIn RO
   WriteRegStr HKLM "${REG_UNINSTALL}" "UninstallString" '"$INSTDIR\Uninstall.exe"'
   
   SetOutPath "$INSTDIR"
-  
-  File ${PROJECT_BUILD_DIR}\json-roller-l4j.exe
+
+  ; Native-image produced executable
+  File ${PROJECT_BUILD_DIR}\json-roller.exe
+
+  ; Include every DLL native-image emitted alongside the binary
+  ; (/nonfatal so the build still succeeds if there are none)
+  File /nonfatal ${PROJECT_BUILD_DIR}\*.dll
 
   ;Store installation folder
   WriteRegStr HKCU "Software\json-roller" "" $INSTDIR
@@ -216,12 +221,6 @@ SectionIn RO
   ;Create uninstaller
   WriteUninstaller "$INSTDIR\Uninstall.exe"
 
-SectionEnd
-
-Section "Java Runtime Environment" java
-
-  SetOutPath "$INSTDIR\jre"
-  File /r "${PROJECT_BASEDIR}\jre\*"
 SectionEnd
 
 ;--------------------------------
@@ -232,7 +231,8 @@ Section "Uninstall"
   ;ADD YOUR OWN FILES HERE...
 
   Delete "$INSTDIR\Uninstall.exe"
-  Delete "$INSTDIR\json-roller-l4j.exe"
+  Delete "$INSTDIR\json-roller.exe"
+  Delete "$INSTDIR\*.dll"
   RMDir /r "$INSTDIR"
 
   !insertmacro un.RemoveFromSystemPath
