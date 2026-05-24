@@ -15,7 +15,9 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.io.File;
 import java.io.FileReader;
+import java.io.InputStreamReader;
 import java.net.URL;
+import java.net.URLConnection;
 import java.net.URLDecoder;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -59,7 +61,7 @@ public class JSONRoller
         inputOption.setOptionalArg(true);
         inputOption.setArgName("filename");
         options.addOption(inputOption);
-        options.addOption(new Option("u", "url", true, "URL to read json from"));
+        options.addOption(new Option("u", "url", true, "URL to read json or csv from"));
         options.addOption(new Option("d", "dissect", false, "Dissect JSON data into each nested key value pair (STDOUT)"));
 
         Option propOption = new Option("p", "properties", true, "Dissect JSON data into properties for each nested key value pair (exclude filename for STDOUT)");
@@ -208,11 +210,68 @@ public class JSONRoller
             {
                 String urlString = cmd.getOptionValue("u", "");
                 URL u = new URL(urlString);
-                try (InputStream in = u.openStream()) {
-                    String data = new String(in.readAllBytes(), StandardCharsets.UTF_8);
-                    readJSONData(data).forEach((o) -> {
-                        workingData.put(o);
-                    });
+                URLConnection conn = u.openConnection();
+                try (InputStream in = conn.getInputStream()) {
+                    String contentType = conn.getContentType();
+                    logIt("Reading URL: " + urlString + " with content type: " + contentType);
+                    if (contentType != null && (contentType.toLowerCase().contains("json") || contentType.toLowerCase().contains("text/javascript")))
+                    {
+                        String data = new String(in.readAllBytes(), StandardCharsets.UTF_8);
+                        readJSONData(data).forEach((o) -> {
+                            workingData.put(o);
+                        });
+                    } else if (contentType != null && (contentType.toLowerCase().contains("csv")) || urlString.toLowerCase().endsWith(".csv")) {
+                        try 
+                        {
+                            int rowNum = 0;
+                            List<String[]> r = new LinkedList<String[]>();
+                            CSVReader reader = new CSVReaderBuilder(new InputStreamReader(in, StandardCharsets.UTF_8))
+                                                    .withCSVParser(new RFC4180ParserBuilder().withQuoteChar('"').withSeparator(',').build())
+                                                    .withMultilineLimit(100)
+                                                    .withKeepCarriageReturn(false)
+                                                    .build();
+                            String[] line = reader.readNext();
+                            boolean hasNext = true;
+                            while (hasNext)
+                            {
+                                r.add(line);
+                                rowNum++;
+                                try
+                                {
+                                    line = reader.readNext();
+                                    if (line == null)
+                                        hasNext = false;
+                                } catch (Exception csvEx) {
+                                    logIt("Row Error(" + String.valueOf(rowNum) + "): " + csvEx.getLocalizedMessage());
+                                }
+                            }
+                            reader.close();
+                            String[] columns = r.get(0);
+                            for(int i = 0; i < columns.length; i++)
+                                registerColumn(columns[i]);
+                            r.remove(0);
+                            r.forEach((row) -> {
+                                try
+                                {
+                                    JSONObject rowObject = new JSONObject();
+                                    for(int i = 0; i < row.length; i++)
+                                    {
+                                        rowObject.put(columns[i], row[i]);
+                                    }
+                                    workingData.put(rowObject);
+                                } catch (Exception insertFailure) {
+                                    logIt("Bad Row (" + insertFailure.getLocalizedMessage() + "): " + new JSONArray(row).toString());
+                                }
+                            });
+                            tableName = filenameWithoutExtension(u.getPath());
+                            logIt("Finished reading CSV: " + urlString  + " " + String.valueOf(rowNum) + " rows");
+                        } catch (Exception e) {
+                            System.err.println("Error reading: " + urlString);
+                            e.printStackTrace(System.err);
+                        }   
+                    } else {
+                        System.err.println("URL Content-Type is not JSON or CSV: " + contentType);
+                    }
                 }
             } 
             if (workingData.length() == 0)
