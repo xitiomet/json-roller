@@ -171,7 +171,7 @@
                   <!-- expand "SNAPSHOT" to what is in the "USER" env variable -->
                   <snapshotEnv>USER</snapshotEnv>
                   <controlDir>${basedir}/src/deb/control</controlDir>
-                  <deb>${project.build.directory}/${project.artifactId}-${project.version}-native.deb</deb>
+                  <deb>${project.build.directory}/${project.artifactId}-${project.version}-native-${os.arch}.deb</deb>
                   <dataSet>
                     <data>
                       <src>${project.build.directory}/${imageName}</src>

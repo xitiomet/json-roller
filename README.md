@@ -76,7 +76,7 @@ Project Page - https://openstatic.org/projects/json-roller/
                                             for STDOUT)
  -t,--tsv <filename.tsv>                    Output Table TSV file (exclude
                                             filename for STDOUT)
- -u,--url <arg>                             URL to read json from
+ -u,--url <arg>                             URL to read json or csv from
  -v,--verbose                               Be Verbose
 ```
 
