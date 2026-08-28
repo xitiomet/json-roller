@@ -389,7 +389,7 @@ public class OutputData
         String dataLC = data.toLowerCase();
         if (dataLC.startsWith("https://") || dataLC.startsWith("http://"))
         {
-            if (dataLC.endsWith(".jpeg") || dataLC.endsWith(".jpg") || dataLC.endsWith(".png") || dataLC.endsWith(".gif") || dataLC.endsWith(".webp") || dataLC.endsWith(".bmp"))
+            if (dataLC.endsWith(".jpeg") || dataLC.endsWith(".jpg") || dataLC.endsWith(".png") || dataLC.endsWith(".gif") || dataLC.endsWith(".webp") || dataLC.endsWith(".bmp") || dataLC.endsWith(".tiff") || dataLC.endsWith(".svg"))
             {
                 return "<td><div class=\"imgDiv\"><img src=\"" + data + "\" onerror=\"this.style.display = 'none';\"></div><a target=\"_blank\" href=\"" + data + "\">" +  StringEscapeUtils.escapeHtml4(data) + "</a></td>";
             } else {
