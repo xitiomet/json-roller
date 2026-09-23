@@ -78,6 +78,10 @@ public class JSONRoller
         keyOption.setArgName("key1,key2");
         options.addOption(keyOption);
 
+        Option excludeOption = new Option("x", "exclude", true, "Comma seperated list of columns to exclude from the output");
+        excludeOption.setArgName("col1,col2");
+        options.addOption(excludeOption);
+
         Option filterOption = new Option("f", "filter", true, "Comma seperated list of filters (Operators are = != >= <= < >) output data will be limited by filters");
         filterOption.setArgName("column=value,column!=value");
         options.addOption(filterOption);
@@ -293,6 +297,12 @@ public class JSONRoller
                     pivotedData = new JSONArray(pivotJSONObject(new JSONObject(), 0, workingData.getJSONObject(0)));
                 }
                 
+                if (cmd.hasOption("x"))
+                {
+                    String excludeColumns = cmd.getOptionValue("x");
+                    pivotedData = excludeColumns(pivotedData, excludeColumns);
+                }
+
                 int recordCount = pivotedData.length();
 
                 if (cmd.hasOption("f"))
@@ -839,6 +849,28 @@ public class JSONRoller
             }
         }
         return returnList;
+    }
+
+    // exclude specific columns from the list of JSONObjects
+    public static JSONArray excludeColumns(JSONArray data, String excludeColumns)
+    {
+        List<JSONObject> result = new ArrayList<JSONObject>();
+        Set<String> excludeSet = new HashSet<String>(Arrays.asList(excludeColumns.split(",")));
+        for (int i = 0; i < data.length(); i++)
+        {
+            JSONObject jo = data.getJSONObject(i);
+            JSONObject newJo = new JSONObject();
+            for (Iterator<String> fieldIterator = jo.keys(); fieldIterator.hasNext(); )
+            {
+                String field = fieldIterator.next();
+                if (!excludeSet.contains(field))
+                {
+                    newJo.put(field, jo.get(field));
+                }
+            }
+            result.add(newJo);
+        }
+        return new JSONArray(result);
     }
 
     // Check if this JSONObject is just a collection of other JSONObjects.
