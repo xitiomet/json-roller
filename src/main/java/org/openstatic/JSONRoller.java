@@ -44,6 +44,7 @@ public class JSONRoller
     private static boolean verbose = false;
     private static List<String> keyLayers = new ArrayList<String>();
     private static List<String> columnOrder = new ArrayList<String>();
+    private static Set<String> excludeColumns = new HashSet<String>();
     private static long processingStartAt;
     private static long processingEndAt;
 
@@ -125,11 +126,21 @@ public class JSONRoller
             {
                 String[] keys = cmd.getOptionValue("k", "").split(",");
                 keyLayers = Arrays.asList( keys );
+                for (int i = 0; i < keyLayers.size(); i++)
+                {
+                    logIt("Registering layer" + String.valueOf(i) + "Key=" + keyLayers.get(i));
+                }
             }
 
             if (cmd.hasOption("v"))
                 JSONRoller.verbose = true;
             
+            if (cmd.hasOption("x"))
+            {
+                String exCols = cmd.getOptionValue("x");
+                JSONRoller.excludeColumns = new HashSet<String>(Arrays.asList(exCols.split(",")));
+                logIt("Excluding Columns from final output: " + JSONRoller.excludeColumns.stream().collect(Collectors.joining(", ")));
+            }
             JSONArray workingData = new JSONArray();
             JSONRoller.processingStartAt = System.currentTimeMillis();
             if (cmd.hasOption("i"))
@@ -295,12 +306,6 @@ public class JSONRoller
                 {
                     logIt("Singular Object Detected: performing table pivot");
                     pivotedData = new JSONArray(pivotJSONObject(new JSONObject(), 0, workingData.getJSONObject(0)));
-                }
-                
-                if (cmd.hasOption("x"))
-                {
-                    String excludeColumns = cmd.getOptionValue("x");
-                    pivotedData = excludeColumns(pivotedData, excludeColumns);
                 }
 
                 int recordCount = pivotedData.length();
@@ -773,9 +778,10 @@ public class JSONRoller
     {
         if (name != null)
         {
-            if (!JSONRoller.columnOrder.contains(name))
+            if (!JSONRoller.columnOrder.contains(name) && !JSONRoller.excludeColumns.contains(name))
             {
-                columnOrder.add(name);
+                //logIt("Registering column: " + name);
+                JSONRoller.columnOrder.add(name);
             }
         }
     }
@@ -849,29 +855,6 @@ public class JSONRoller
             }
         }
         return returnList;
-    }
-
-    // exclude specific columns from the list of JSONObjects
-    public static JSONArray excludeColumns(JSONArray data, String excludeColumns)
-    {
-        List<JSONObject> result = new ArrayList<JSONObject>();
-        Set<String> excludeSet = new HashSet<String>(Arrays.asList(excludeColumns.split(",")));
-        logIt("Excluding Columns from final output: " + excludeSet.stream().collect(Collectors.joining(", ")));
-        for (int i = 0; i < data.length(); i++)
-        {
-            JSONObject jo = data.getJSONObject(i);
-            JSONObject newJo = new JSONObject();
-            for (Iterator<String> fieldIterator = jo.keys(); fieldIterator.hasNext(); )
-            {
-                String field = fieldIterator.next();
-                if (!excludeSet.contains(field))
-                {
-                    newJo.put(field, jo.get(field));
-                }
-            }
-            result.add(newJo);
-        }
-        return new JSONArray(result);
     }
 
     // Check if this JSONObject is just a collection of other JSONObjects.
