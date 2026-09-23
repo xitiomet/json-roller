@@ -856,6 +856,7 @@ public class JSONRoller
     {
         List<JSONObject> result = new ArrayList<JSONObject>();
         Set<String> excludeSet = new HashSet<String>(Arrays.asList(excludeColumns.split(",")));
+        logIt("Excluding Columns from final output: " + excludeSet.stream().collect(Collectors.joining(", ")));
         for (int i = 0; i < data.length(); i++)
         {
             JSONObject jo = data.getJSONObject(i);
